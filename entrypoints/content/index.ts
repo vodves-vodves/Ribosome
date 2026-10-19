@@ -5,7 +5,7 @@ import { ICON } from '@/shared/ui/icons';
 import { applyTheme, loadSettings, watchSettings, watchSystemTheme, type Settings } from '@/shared/settings';
 import style from './style.css?inline';
 import { Bubble } from './bubble';
-import { anchorDead, anchorShown, clamp, setPos, viewport, type Pos, type Side } from './geometry';
+import { anchorDead, anchorShown, clamp, clipUnder, headerRects, setPos, viewport, type Pos, type Side } from './geometry';
 import { locate } from './locate';
 import { capture, eventRoots, focusRect, focusRoots, onScrollbar, sameRange, type Capture } from './selection';
 
@@ -137,7 +137,9 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
     if (!r || !anchorShown(r, cur.anchor.clips)) return null;
     const vp = viewport();
     const side = trigSide ?? (r.bottom + 6 + 28 > vp.h - 8 ? 'above' : 'below');
-    return { left: clamp(r.right + 6, 8, vp.w - 28 - 8), top: side === 'below' ? r.bottom + 6 : r.top - 28 - 6, side };
+    const left = clamp(r.right + 6, 8, vp.w - 28 - 8);
+    const top = side === 'below' ? r.bottom + 6 : r.top - 28 - 6;
+    return { left, top, side, clip: clipUnder(headerRects(host), left, top, 28) };
   }
 
   function applyTrigger(p: Pos | null | undefined) {
@@ -146,6 +148,7 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
     if (!p) return;
     trigSide = p.side;
     setPos(trigger, p);
+    trigger.style.clipPath = p.clip;
   }
 
   /** Клик в пустое место, Esc: закрыть иконку и обычное окно. Закреплённые остаются. */

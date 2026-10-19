@@ -51,22 +51,54 @@ export function anchorShown(r: DOMRect, clips: Element[]) {
 }
 
 export type Side = 'below' | 'above';
-export type Pos = { left: number; top: number; side: Side };
+export type Pos = { left: number; top: number; side: Side; clip: string };
 
 /**
  * Окно по центру якоря, под ним или над ним. Сторона выбирается один раз по высоте `pickH`
  * (максимальная высота окна, а не скелета) и дальше не меняется, чтобы окно не прыгало.
  */
-export function placeBox(w: number, h: number, rect: DOMRect, gap: number, side?: Side, pickH = 0): Pos {
+export function placeBox(w: number, h: number, rect: DOMRect, gap: number, side?: Side, pickH = 0, heads: DOMRect[] = []): Pos {
   const vp = viewport();
+  // шапка сайта — верхний край видимой области
+  const edge = Math.max(0, ...heads.map((r) => r.bottom));
   const below = vp.h - 8 - rect.bottom - gap;
-  const above = rect.top - gap - 8;
+  const above = rect.top - gap - edge - 8;
   // не помещается ни снизу, ни сверху — туда, где места больше
   side ??= below >= Math.max(h, pickH) || below >= above ? 'below' : 'above';
   let top = side === 'below' ? rect.bottom + gap : rect.top - gap - h;
   // пока текст целиком на экране, окно тоже целиком на экране — пусть даже поверх текста
-  if (rect.top >= 0 && rect.bottom <= vp.h) top = clamp(top, 8, vp.h - h - 8);
-  return { left: clamp(rect.left + rect.width / 2 - w / 2, 8, vp.w - w - 8), top, side };
+  if (rect.top >= edge && rect.bottom <= vp.h) top = clamp(top, edge + 8, vp.h - h - 8);
+  const left = clamp(rect.left + rect.width / 2 - w / 2, 8, vp.w - w - 8);
+  return { left, top, side, clip: clipUnder(heads, left, top, w) };
+}
+
+/**
+ * Фиксированные и липкие элементы сайта у верхнего края экрана — шапки. Наш слой в top layer рисуется
+ * поверх них, поэтому окно, привязанное к тексту, обрезаем по их нижнему краю: текст уходит под шапку, и окно тоже.
+ */
+export function headerRects(host: Element): DOMRect[] {
+  const vp = viewport();
+  const out: DOMRect[] = [];
+  const seen = new Set<Element>();
+  for (const x of [vp.w * 0.1, vp.w / 2, vp.w * 0.9]) {
+    const hit = document.elementsFromPoint(x, 1).find((e) => e !== host);
+    for (let el = hit; el && el !== document.body && el !== document.documentElement && !seen.has(el); el = el.parentElement ?? undefined) {
+      seen.add(el);
+      const pos = getComputedStyle(el).position;
+      if (pos !== 'fixed' && pos !== 'sticky') continue;
+      const r = el.getBoundingClientRect();
+      if (r.top <= 1 && r.bottom > 0 && r.bottom < vp.h / 2) out.push(r);
+      break;
+    }
+  }
+  return out;
+}
+
+/** clip-path для бокса, который заходит под шапку. Тень по бокам и снизу не режем. */
+export function clipUnder(heads: DOMRect[], left: number, top: number, w: number) {
+  let cut = 0;
+  for (const r of heads) if (r.right > left && r.left < left + w) cut = Math.max(cut, r.bottom - top);
+  return cut > 0 ? `inset(${cut}px -40px -40px -40px)` : '';
 }
 
 /** В видимую область с отступом 8 px: у закреплённого окна крестик должен оставаться доступным. */

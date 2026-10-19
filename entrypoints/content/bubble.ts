@@ -1,7 +1,7 @@
 import type { Req } from '@/shared/messages';
 import { COPY_LABEL, ICON } from '@/shared/ui/icons';
 import { copyText, createRunner, flashCopy, overlayScrollbar, render, type State, type View } from '@/shared/ui/view';
-import { anchorRect, anchorShown, clampPos, placeBox, setPos, viewport, type Anchor, type Pos, type Side } from './geometry';
+import { anchorRect, anchorShown, clampPos, headerRects, placeBox, setPos, viewport, type Anchor, type Pos, type Side } from './geometry';
 
 const DRAG_END = ['pointerup', 'pointercancel', 'lostpointercapture'] as const;
 
@@ -99,6 +99,7 @@ export class Bubble {
     src.hidden = !on;
     src.textContent = on ? this.req.text.replace(/\s+/g, ' ').slice(0, 300) : '';
     this.el.style.visibility = '';
+    this.el.style.clipPath = ''; // закреплённое стоит на экране поверх шапки сайта
     this.hooks.pin(this, on);
     if (on) return;
     this.side = undefined;
@@ -159,7 +160,7 @@ export class Bubble {
     if (!this.el.classList.contains('is-on')) return null;
     const r = anchorRect(this.anchor);
     if (!anchorShown(r, this.anchor.clips)) return null;
-    return placeBox(this.el.offsetWidth, this.el.offsetHeight, r, GAP, this.side, MAX_H);
+    return placeBox(this.el.offsetWidth, this.el.offsetHeight, r, GAP, this.side, MAX_H, headerRects((this.scope as ShadowRoot).host));
   }
 
   /** Запись для кадра. */
@@ -169,6 +170,7 @@ export class Bubble {
     this.side = p.side;
     setPos(this.el, p);
     this.el.style.transformOrigin = p.side === 'below' ? 'top center' : 'bottom center';
+    this.el.style.clipPath = p.clip;
   }
 
   follow() {

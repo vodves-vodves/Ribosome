@@ -1,6 +1,6 @@
 // «Показать на странице»: прокрутка к исходному тексту закреплённого окна и подсветка наложением. DOM сайта не трогаем.
 import type { Bubble } from './bubble';
-import { anchorDead, anchorRect, viewport, type Anchor } from './geometry';
+import { anchorDead, anchorRect, clipUnder, headerRects, viewport, type Anchor } from './geometry';
 
 /**
  * Прямоугольники текстовых узлов Range. Range.getClientRects() у целиком выделенного абзаца
@@ -44,11 +44,14 @@ function flash(layer: HTMLElement, a: Anchor) {
     return f;
   });
   if (!els.length) return;
+  const host = (layer.getRootNode() as ShadowRoot).host;
   const sync = () => {
     const rs = anchorRects(a);
+    const heads = headerRects(host);
     els.forEach((f, i) => {
       const r = rs[i];
-      f.style.cssText = r ? `left:${r.left - 2}px;top:${r.top - 1}px;width:${r.width + 4}px;height:${r.height + 2}px` : 'display:none';
+      // текст ушёл под шапку сайта — подсветка тоже
+      f.style.cssText = r ? `left:${r.left - 2}px;top:${r.top - 1}px;width:${r.width + 4}px;height:${r.height + 2}px;clip-path:${clipUnder(heads, r.left - 2, r.top - 1, r.width + 4) || 'none'}` : 'display:none';
     });
   };
   let raf = 0;
