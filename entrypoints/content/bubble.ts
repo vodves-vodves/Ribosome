@@ -1,7 +1,7 @@
 import type { Req } from '@/shared/messages';
 import { COPY_LABEL, ICON } from '@/shared/ui/icons';
 import { copyText, createRunner, flashCopy, overlayScrollbar, render, type State, type View } from '@/shared/ui/view';
-import { anchorRect, anchorShown, clampPos, placeBox, setPos, type Anchor, type Pos, type Side } from './geometry';
+import { anchorRect, anchorShown, clampPos, placeBox, setPos, viewport, type Anchor, type Pos, type Side } from './geometry';
 
 const DRAG_END = ['pointerup', 'pointercancel', 'lostpointercapture'] as const;
 
@@ -42,8 +42,7 @@ export class Bubble {
   constructor(
     layer: HTMLElement,
     private scope: Node,
-    private onClose: (b: Bubble) => void,
-    private onPin: (b: Bubble, pinned: boolean) => void,
+    private hooks: { close(b: Bubble): void; pin(b: Bubble, pinned: boolean): void; locate(b: Bubble): void },
   ) {
     const el = this.el;
     el.className = 'rb-bubble rb-surface';
@@ -61,6 +60,29 @@ export class Bubble {
     this.v.retry.addEventListener('click', () => (this.state?.kind === 'ctx' ? location.reload() : this.open(this.anchor, this.req)));
     this.q('.rb-pin').addEventListener('click', () => this.togglePin());
     this.q('.rb-bh').addEventListener('pointerdown', (e) => this.drag(e));
+    this.q('.rb-loc').addEventListener('click', () => this.hooks.locate(this));
+    this.q('.rb-src').addEventListener('click', () => this.hooks.locate(this));
+  }
+
+  /** Подпись под переводом, не меняя состояния (ошибки «Показать на странице»). */
+  note(text: string) {
+    this.v.note.textContent = text;
+    this.v.note.hidden = false;
+    if (this.pinned) this.clampIntoView();
+  }
+
+  /** Закреплённое окно легло на подсвеченный текст — отъезжает под него, снизу нет места — над ним. */
+  nudge(r: DOMRect) {
+    if (!this.pinned) return;
+    // целевое положение из style, а не getBoundingClientRect: окно может быть посреди transition
+    const left = parseFloat(this.el.style.left);
+    const top = parseFloat(this.el.style.top);
+    const w = this.el.offsetWidth;
+    const h = this.el.offsetHeight;
+    if (left + w < r.left || left > r.right || top + h < r.top || top > r.bottom) return;
+    let t = r.bottom + 12;
+    if (t + h > viewport().h - 8) t = r.top - 12 - h;
+    this.el.style.top = `${Math.max(8, t)}px`;
   }
 
   get pinned() {
@@ -77,7 +99,7 @@ export class Bubble {
     src.hidden = !on;
     src.textContent = on ? this.req.text.replace(/\s+/g, ' ').slice(0, 300) : '';
     this.el.style.visibility = '';
-    this.onPin(this, on);
+    this.hooks.pin(this, on);
     if (on) return;
     this.side = undefined;
     this.follow();
@@ -157,6 +179,6 @@ export class Bubble {
     this.runner.stop();
     this.el.classList.remove('is-in');
     setTimeout(() => this.el.remove(), 170);
-    this.onClose(this);
+    this.hooks.close(this);
   }
 }

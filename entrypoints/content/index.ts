@@ -6,6 +6,7 @@ import { applyTheme, loadSettings, watchSettings, watchSystemTheme, type Setting
 import style from './style.css?inline';
 import { Bubble } from './bubble';
 import { anchorDead, anchorShown, clamp, setPos, viewport, type Pos, type Side } from './geometry';
+import { locate } from './locate';
 import { capture, eventRoots, focusRect, focusRoots, onScrollbar, sameRange, type Capture } from './selection';
 
 export default defineContentScript({
@@ -80,7 +81,7 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
     cur = null;
     lift(host);
     const req = { text: c.text, from: settings!.source, to: settings!.target };
-    active ??= new Bubble(root, shadow, onClose, onPin);
+    active ??= new Bubble(root, shadow, { close: onClose, pin: onPin, locate: (b) => locate(b, root, host, pinned) });
     active.open(c.anchor, req);
   }
 
