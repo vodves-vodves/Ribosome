@@ -3,7 +3,8 @@ export const PORT = 'translate';
 
 export const MAX_TEXT = 5000;
 
-export type TranslateRequest = { type: 'translate'; id: string; text: string; from: string; to: string };
+export type Req = { text: string; from: string; to: string };
+export type TranslateRequest = Req & { type: 'translate'; id: string };
 
 export type TranslateError = 'offline' | 'rate_limited' | 'server' | 'nothing';
 

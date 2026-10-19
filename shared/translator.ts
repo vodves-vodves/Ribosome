@@ -1,9 +1,7 @@
 // Единственная точка выхода в сеть и вся защита от спама: кэш, дедуп, отмена, лимитер, backoff.
 import { normLang } from './langs';
-import { MAX_TEXT, type TranslateResponse } from './messages';
+import { MAX_TEXT, type Req, type TranslateResponse } from './messages';
 import { ProviderError, type Provider, type ProviderResult } from './providers/types';
-
-export type Req = { text: string; from: string; to: string };
 
 export interface Cache {
   get(key: string): Promise<ProviderResult | undefined>;
