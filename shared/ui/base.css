@@ -1,0 +1,97 @@
+/* Токены и общие элементы UI Ribosome — окно перевода на странице и popup. Вариант «Стекло». */
+.rb {
+  --ui-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", Inter, Roboto, sans-serif;
+  --dur-fast: 120ms;
+  --ease-out: cubic-bezier(0, 0, .2, 1);
+  --accent: #007aff;
+  --red: #ff3b30;
+  --t1: #1d1d1f;
+  --t2: rgba(60, 60, 67, .72);
+  --t3: rgba(60, 60, 67, .45);
+  --sep: rgba(60, 60, 67, .18);
+  --fill: rgba(120, 120, 128, .12);
+  --fill2: rgba(120, 120, 128, .2);
+  --glass: rgba(248, 248, 250, .86);
+  --group: #fff;
+  --seg-on: #fff;
+  --shadow: 0 0 0 .5px rgba(0, 0, 0, .09), 0 10px 32px rgba(0, 0, 0, .14), 0 2px 6px rgba(0, 0, 0, .06);
+  --hairline: rgba(255, 255, 255, .6);
+  --ring: rgba(0, 122, 255, .18);
+  --thumb: rgba(0, 0, 0, .28);
+  direction: ltr;
+  user-select: none;
+  font: 400 14px/1.45 var(--ui-font);
+  color: var(--t1);
+  -webkit-font-smoothing: antialiased;
+}
+.rb[data-theme=dark] {
+  --accent: #0a84ff;
+  --red: #ff453a;
+  --t1: #f5f5f7;
+  --t2: rgba(235, 235, 245, .66);
+  --t3: rgba(235, 235, 245, .4);
+  --sep: rgba(84, 84, 88, .6);
+  --fill: rgba(120, 120, 128, .24);
+  --fill2: rgba(120, 120, 128, .34);
+  --glass: rgba(34, 34, 38, .88);
+  --group: #2c2c2e;
+  --seg-on: #636366;
+  --shadow: 0 0 0 .5px rgba(255, 255, 255, .12), 0 12px 36px rgba(0, 0, 0, .5), 0 2px 6px rgba(0, 0, 0, .3);
+  --hairline: rgba(255, 255, 255, .08);
+  --ring: rgba(10, 132, 255, .3);
+  --thumb: rgba(255, 255, 255, .32);
+}
+.rb *, .rb *::before, .rb *::after { box-sizing: border-box; }
+.rb [hidden] { display: none !important; }
+.rb ::selection { background: rgba(0, 122, 255, .22); }
+.rb svg { display: block; }
+.rb button { font-family: inherit; cursor: pointer; }
+.rb button:focus-visible, .rb select:focus-visible { outline: 0; box-shadow: 0 0 0 3px var(--ring), 0 0 0 1px var(--accent); }
+
+.rb-surface {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: var(--shadow), inset 0 0 0 .5px var(--hairline);
+}
+
+/* кнопки */
+.rb-btn { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px 0 8px; border: 0; border-radius: 8px; background: var(--fill); color: var(--t1); font: 500 13px/1 var(--ui-font); letter-spacing: .01em; white-space: nowrap; transition: background var(--dur-fast) var(--ease-out), transform 90ms var(--ease-out), color var(--dur-fast); }
+.rb-btn svg { width: 14px; height: 14px; }
+.rb-btn:hover { background: var(--fill2); }
+.rb-btn:active { transform: scale(.97); }
+.rb-btn.is-done { color: var(--accent); }
+.rb-btn.is-fail { color: var(--red); }
+.rb-ib { width: 22px; height: 22px; padding: 0; border: 0; border-radius: 11px; background: var(--fill); color: var(--t2); display: grid; place-items: center; transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast); }
+.rb-ib:hover { background: var(--fill2); }
+.rb-ib svg { width: 11px; height: 11px; }
+
+/* текст перевода, подпись, скелет */
+.rb-bt, .rb-ta, .rb-res { user-select: text; }
+.rb-bt { font-size: 15px; line-height: 1.45; overflow: auto; color: var(--t1); text-wrap: pretty; overflow-wrap: anywhere; white-space: pre-line; }
+.rb-bt.is-empty { color: var(--t3); }
+.rb-note { padding: 6px 14px 0; font-size: 12px; line-height: 1.4; color: var(--t2); letter-spacing: .01em; max-width: 320px; }
+.rb-sk { display: grid; gap: 8px; padding: 3px 0 2px; width: 240px; max-width: 100%; }
+.rb-sk i { display: block; height: 11px; border-radius: 6px; background: linear-gradient(90deg, var(--fill) 25%, var(--fill2) 50%, var(--fill) 75%); background-size: 200% 100%; animation: rb-sh 1.1s linear infinite; }
+.rb-sk i:nth-child(2) { width: 72%; }
+@keyframes rb-sh { to { background-position: -200% 0; } }
+
+/* системный скроллбар прячем, свой ползунок как в macOS — виден при прокрутке и наведении */
+.rb-scroll { scrollbar-width: none; }
+.rb-scroll::-webkit-scrollbar { display: none; }
+.rb-thumb { position: absolute; right: 4px; width: 5px; border-radius: 3px; background: var(--thumb); opacity: 0; pointer-events: none; transition: opacity 180ms var(--ease-out); z-index: 5; }
+.rb-thumb.is-scrolling, :hover > .rb-thumb { opacity: 1; }
+
+/* выпадающие списки: нативный select с appearance: base-select, панель рисуем сами */
+.rb select, .rb ::picker(select) { appearance: base-select; }
+.rb select::picker-icon { display: none; }
+.rb ::picker(select) { border: 0; padding: 5px; margin: 6px 0; min-width: anchor-size(width); max-height: 300px; border-radius: 12px; background: var(--glass); -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%); box-shadow: var(--shadow), inset 0 0 0 .5px var(--hairline); color: var(--t1); scrollbar-width: thin; opacity: 0; transform: scale(.97); transform-origin: top center; transition: opacity 140ms var(--ease-out), transform 140ms var(--ease-out), display 140ms allow-discrete, overlay 140ms allow-discrete; }
+.rb ::picker(select):popover-open { opacity: 1; transform: none; }
+@starting-style { .rb ::picker(select):popover-open { opacity: 0; transform: scale(.97); } }
+.rb option { display: flex; align-items: center; gap: 8px; min-width: 160px; padding: 6px 14px 6px 8px; border-radius: 7px; font: 400 14px/1.3 var(--ui-font); color: var(--t1); cursor: pointer; text-align: left; }
+.rb option:hover, .rb option:focus-visible { background: var(--accent); color: #fff; outline: 0; }
+.rb option::checkmark { width: 14px; flex: none; font-size: 12px; font-weight: 600; text-align: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rb-sk i { animation: none; }
+}

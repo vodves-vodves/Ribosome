@@ -1,0 +1,13 @@
+html, body { margin: 0; }
+body { width: 360px; background: #f9f9fa; }
+body[data-theme=dark] { background: #232327; }
+
+.rb-ph { display: flex; align-items: center; gap: 10px; padding: 12px 14px 10px; }
+.rb-ph .logo { width: 22px; height: 22px; border-radius: 6px; }
+.rb-ph .name { font-weight: 600; font-size: 14px; letter-spacing: -.005em; }
+
+.rb-seg { display: flex; padding: 2px; background: var(--fill); border-radius: 9px; margin: 0 14px 12px; }
+.rb-seg button { flex: 1; height: 26px; border: 0; border-radius: 7px; background: transparent; color: var(--t1); font: 500 13px/1 var(--ui-font); letter-spacing: .01em; transition: background var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out); }
+.rb-seg button.is-on { background: var(--seg-on); box-shadow: 0 1px 3px rgba(0, 0, 0, .12), 0 0 0 .5px rgba(0, 0, 0, .04); }
+.rb-seg.sm { width: 196px; padding: 2px; }
+.rb-seg.sm button { height: 22px; font-size: 12px; }
