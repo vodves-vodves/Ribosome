@@ -89,7 +89,10 @@ trTo.addEventListener('change', run);
 $('#tr-swap').addEventListener('click', () => {
   let from: string;
   let to: string;
-  if (state?.kind === 'ok') {
+  clearTimeout(inT);
+  // результат годится, только если он для того, что сейчас в поле и в пилюлях: ввод мог ещё ждать debounce
+  const fresh = req && req.text === trIn.value.trim() && req.from === trFrom.value && req.to === trTo.value;
+  if (state?.kind === 'ok' && fresh) {
     from = state.to;
     to = state.detected;
     trIn.value = state.text;

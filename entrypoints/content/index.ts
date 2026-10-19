@@ -83,6 +83,16 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
     const req = { text: c.text, from: settings!.source, to: settings!.target };
     active ??= new Bubble(root, shadow, { close: onClose, pin: onPin, locate: (b) => locate(b, root, host, pinned) });
     active.open(c.anchor, req);
+    watchShadowScroll();
+  }
+
+  // scroll не composed: прокрутку контейнеров внутри shadow DOM страницы слушатель на window не видит
+  let shadowScroll = new AbortController();
+  function watchShadowScroll() {
+    shadowScroll.abort();
+    shadowScroll = new AbortController();
+    for (const a of [active?.anchor, cur?.anchor])
+      for (const el of a?.clips ?? []) if (el.getRootNode() !== document) el.addEventListener('scroll', schedule, { passive: true, signal: shadowScroll.signal });
   }
 
   function onClose(b: Bubble) {
@@ -110,6 +120,7 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
     applyTrigger(measureTrigger());
     void trigger.offsetWidth;
     trigger.classList.add('is-in');
+    watchShadowScroll();
   }
 
   function hideTrigger() {
@@ -151,7 +162,12 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
     if (down !== downSeq) return;
     const s = settings!;
     const c = capture(roots, s.translateInFields);
-    if (!c) return hideTrigger();
+    if (!c) {
+      // выделение снято (в том числе с клавиатуры): то же выделение потом снова должно сработать
+      clearTimeout(instantT);
+      cur = null;
+      return hideTrigger();
+    }
     if (c.anchor.range?.intersectsNode(host)) return;
     // то же выделение, что уже открыто или ждёт (клик по скроллбару, selectionchange после mouseup) — не повторяем
     if (c.anchor.range && (sameRange(c.anchor.range, active?.anchor.range) || sameRange(c.anchor.range, cur?.anchor.range))) return;
@@ -184,10 +200,14 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
     },
     opts,
   );
+  // после нативного drag-and-drop (ссылка, картинка, выделенный текст) mouseup не приходит
+  const endPassive = () => root.classList.remove('is-passive');
+  addEventListener('dragstart', endPassive, opts);
+  addEventListener('pointercancel', endPassive, opts);
   addEventListener(
     'mouseup',
     (e) => {
-      root.classList.remove('is-passive');
+      endPassive();
       if (e.button !== 0 || skipUp) return;
       const roots = eventRoots(e);
       const clicks = e.detail;

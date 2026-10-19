@@ -59,11 +59,15 @@ function flash(layer: HTMLElement, a: Anchor) {
     });
   };
   sync();
+  // scroll не composed: контейнеры внутри shadow DOM страницы слушаем напрямую
+  const shadowClips = a.clips.filter((c) => c.getRootNode() !== document);
   addEventListener('scroll', onMove, { capture: true, passive: true });
   addEventListener('resize', onMove);
+  shadowClips.forEach((c) => c.addEventListener('scroll', onMove, { passive: true }));
   const off = () => {
     removeEventListener('scroll', onMove, true);
     removeEventListener('resize', onMove);
+    shadowClips.forEach((c) => c.removeEventListener('scroll', onMove));
     cancelAnimationFrame(raf);
     els.forEach((f) => f.remove());
     if (flashOff === off) flashOff = null;
@@ -158,6 +162,17 @@ export function locate(b: Bubble, layer: HTMLElement, host: Element, pinned: Ite
   const y0 = scrollY;
   const start = a.range ? a.range.startContainer : a.el!;
   (start instanceof Element ? start : start.parentElement)?.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
+  // scrollIntoView центрирует элемент целиком — во вложенных контейнерах доводим сам фрагмент, от внутреннего к внешнему
+  for (const c of scrollers(a)) {
+    const s = getComputedStyle(c);
+    if (!/auto|scroll/.test(s.overflowX + s.overflowY)) continue;
+    const r = anchorRect(a);
+    const b = c.getBoundingClientRect();
+    const top = b.top + c.clientTop;
+    const left = b.left + c.clientLeft;
+    const dy = r.height > c.clientHeight ? r.top - top - 8 : r.top + r.height / 2 - (top + c.clientHeight / 2);
+    c.scrollBy({ top: dy, left: r.left + r.width / 2 - (left + c.clientWidth / 2), behavior: 'instant' });
+  }
   // 2) доводим сам фрагмент: по центру видимой под шапкой области, а выше 80 % экрана — началом к верху
   const r0 = anchorRect(a);
   const vp = viewport();

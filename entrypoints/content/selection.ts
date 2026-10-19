@@ -5,14 +5,20 @@ export type Capture = { text: string; anchor: Anchor; focus: Range | null; back:
 
 /** Нажатие по системной полосе прокрутки — не «клик в пустое место». */
 export function onScrollbar(e: MouseEvent) {
-  const t = e.target;
+  // настоящий target: на window событие из shadow DOM страницы уже перенацелено на host
+  const t = e.composedPath()[0];
   const de = document.documentElement;
   if (t === de || t === document.body) {
     const rtlBar = getComputedStyle(de).direction === 'rtl' && e.clientX < innerWidth - de.clientWidth;
     return e.clientX >= de.clientWidth || e.clientY >= de.clientHeight || rtlBar;
   }
-  // у RTL-элемента полоса слева от padding box — offsetX отрицательный
-  return t instanceof Element && t.clientWidth > 0 && (e.offsetX >= t.clientWidth || e.offsetY >= t.clientHeight || e.offsetX < 0);
+  if (!(t instanceof Element) || !t.clientWidth) return false;
+  // offsetX тоже считается от перенацеленного target — меряем от самого элемента
+  const r = t.getBoundingClientRect();
+  const x = e.clientX - r.left - t.clientLeft;
+  const y = e.clientY - r.top - t.clientTop;
+  // у RTL-элемента полоса слева от padding box — x отрицательный
+  return x >= t.clientWidth || y >= t.clientHeight || x < 0;
 }
 
 export function sameRange(a: Range, b: Range | null | undefined) {
@@ -56,12 +62,11 @@ function selectionRange(sel: ComposedSelection, roots: ShadowRoot[]): Range | nu
 
 type Field = HTMLInputElement | HTMLTextAreaElement;
 
-/** Поле ввода с выделением (с заходом в shadow DOM). Пароли не трогаем. */
+/** Поле ввода в фокусе (с заходом в shadow DOM). */
 function activeField(): Field | null {
   let a = document.activeElement;
   while (a?.shadowRoot?.activeElement) a = a.shadowRoot.activeElement;
-  const field = a instanceof HTMLTextAreaElement || (a instanceof HTMLInputElement && /^(text|search|url|tel)$/.test(a.type));
-  return field && (a as Field).selectionStart !== (a as Field).selectionEnd ? (a as Field) : null;
+  return a instanceof HTMLTextAreaElement || a instanceof HTMLInputElement ? a : null;
 }
 
 const editable = (r: Range) => {
@@ -73,7 +78,9 @@ const editable = (r: Range) => {
 export function capture(roots: ShadowRoot[], inFields: boolean): Capture | null {
   const field = activeField();
   if (field) {
-    if (!inFields) return null;
+    // Range у поля схлопнут, текст — из selectionStart/End. Пароли, email и прочие поля без selection API не трогаем
+    const plain = field instanceof HTMLTextAreaElement || /^(text|search|url|tel)$/.test(field.type);
+    if (!inFields || !plain || field.selectionStart === field.selectionEnd) return null;
     const text = field.value.slice(field.selectionStart ?? 0, field.selectionEnd ?? 0).trim();
     return text ? { text, anchor: fieldAnchor(field), focus: null, back: false } : null;
   }

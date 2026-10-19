@@ -5,8 +5,10 @@ const URL_BASE = 'https://translate.googleapis.com/translate_a/single';
 /** Неофициальный endpoint gtx: без ключа, но может ответить 429. */
 export const google: Provider = {
   id: 'google',
-  async translate(text, from, to, signal) {
+  async translate(text, from, to, abort) {
     const url = `${URL_BASE}?${new URLSearchParams({ client: 'gtx', sl: from, tl: to, dt: 't' })}`;
+    // зависшее соединение: через 15 с — TimeoutError, для пользователя «Нет соединения» с кнопкой «Повторить»
+    const signal = AbortSignal.any([abort, AbortSignal.timeout(15_000)]);
     // длинный текст не влезает в URL
     const res =
       text.length > 1500
@@ -14,10 +16,17 @@ export const google: Provider = {
         : await fetch(`${url}&q=${encodeURIComponent(text)}`, { signal });
     if (res.status === 429 || res.status === 403) throw new ProviderError('rate_limited', res.status);
     if (!res.ok) throw new ProviderError('server', res.status);
+    let data: unknown;
     try {
-      return parseGtx(await res.json());
+      data = await res.json();
+    } catch (e) {
+      if (e instanceof SyntaxError) throw new ProviderError('server');
+      throw e; // обрыв сети посреди тела — это «нет соединения», а не ошибка сервиса
+    }
+    try {
+      return parseGtx(data);
     } catch {
-      throw new ProviderError('server', res.status);
+      throw new ProviderError('server');
     }
   },
 };

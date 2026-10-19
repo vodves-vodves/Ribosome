@@ -83,9 +83,13 @@ export function createRunner(onState: (s: State) => void) {
       cancel();
     };
     const go = () => {
-      // кэш отвечает за миллисекунды: скелет — только если ответа нет дольше 80 мс
-      timer = setTimeout(() => alive && onState({ kind: 'loading' }), 80);
-      const r = requestTranslation(req, () => alive && onState({ kind: 'queued' }));
+      let queued = false;
+      // кэш отвечает за миллисекунды: скелет — только если ответа нет дольше 80 мс и запрос не в очереди
+      timer = setTimeout(() => alive && !queued && onState({ kind: 'loading' }), 80);
+      const r = requestTranslation(req, () => {
+        queued = true;
+        if (alive) onState({ kind: 'queued' });
+      });
       cancel = r.cancel;
       r.result.then((res) => {
         if (!alive) return;

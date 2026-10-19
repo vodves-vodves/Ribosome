@@ -93,10 +93,11 @@ export function createTranslator({ provider, secondary, cache, acquire = createL
   let pauseUntil = 0;
   let step = 0;
 
-  async function run(p: Provider, key: string, from: string, to: string, text: string, signal: AbortSignal, onQueued: () => void) {
+  async function run(p: Provider, key: string, from: string, to: string, text: string, signal: AbortSignal, onQueued: () => void, onStarted: () => void) {
     if (Date.now() < pauseUntil) throw new Paused();
     await acquire(signal, onQueued);
     signal.throwIfAborted();
+    onStarted();
     if (Date.now() < pauseUntil) throw new Paused();
     if (navigator.onLine === false) throw new TypeError('offline');
     try {
@@ -116,15 +117,24 @@ export function createTranslator({ provider, secondary, cache, acquire = createL
   }
 
   /** Одинаковый ключ уже в полёте — второй fetch не создаётся. Fetch отменяется, только когда ушли все ждущие. */
-  function join(key: string, signal: AbortSignal, onQueued: () => void, start: (s: AbortSignal, q: () => void) => Promise<ProviderResult>) {
+  function join(
+    key: string,
+    signal: AbortSignal,
+    onQueued: () => void,
+    start: (s: AbortSignal, queued: () => void, started: () => void) => Promise<ProviderResult>,
+  ) {
     if (signal.aborted) return Promise.reject(signal.reason);
     let fl = inflight.get(key);
     if (!fl) {
       const f: Flight = { ctrl: new AbortController(), waiters: 0, queued: false, listeners: new Set(), promise: null! };
-      f.promise = start(f.ctrl.signal, () => {
-        f.queued = true;
-        f.listeners.forEach((l) => l());
-      }).finally(() => {
+      f.promise = start(
+        f.ctrl.signal,
+        () => {
+          f.queued = true;
+          f.listeners.forEach((l) => l());
+        },
+        () => (f.queued = false), // вышел из очереди: присоединившимся позже «в очереди» не показываем
+      ).finally(() => {
         if (inflight.get(key) === f) inflight.delete(key);
       });
       inflight.set(key, (fl = f));
@@ -152,7 +162,7 @@ export function createTranslator({ provider, secondary, cache, acquire = createL
     const key = `${p.id}|${from}|${to}|${text}`;
     const hit = await cache.get(key).catch(() => undefined);
     if (hit) return { ...hit, cached: true };
-    const r = await join(key, signal, onQueued, (s, q) => run(p, key, from, to, text, s, q));
+    const r = await join(key, signal, onQueued, (s, q, started) => run(p, key, from, to, text, s, q, started));
     return { ...r, cached: false };
   }
 

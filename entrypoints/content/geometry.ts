@@ -59,13 +59,14 @@ export type Pos = { left: number; top: number; side: Side };
  */
 export function placeBox(w: number, h: number, rect: DOMRect, gap: number, side?: Side, pickH = 0): Pos {
   const vp = viewport();
-  const hs = Math.max(h, pickH);
-  side ??= rect.bottom + gap + hs > vp.h - 8 && rect.top - gap - hs > 8 ? 'above' : 'below';
-  return {
-    left: clamp(rect.left + rect.width / 2 - w / 2, 8, vp.w - w - 8),
-    top: side === 'below' ? rect.bottom + gap : rect.top - gap - h,
-    side,
-  };
+  const below = vp.h - 8 - rect.bottom - gap;
+  const above = rect.top - gap - 8;
+  // не помещается ни снизу, ни сверху — туда, где места больше
+  side ??= below >= Math.max(h, pickH) || below >= above ? 'below' : 'above';
+  let top = side === 'below' ? rect.bottom + gap : rect.top - gap - h;
+  // пока текст целиком на экране, окно тоже целиком на экране — пусть даже поверх текста
+  if (rect.top >= 0 && rect.bottom <= vp.h) top = clamp(top, 8, vp.h - h - 8);
+  return { left: clamp(rect.left + rect.width / 2 - w / 2, 8, vp.w - w - 8), top, side };
 }
 
 /** В видимую область с отступом 8 px: у закреплённого окна крестик должен оставаться доступным. */
