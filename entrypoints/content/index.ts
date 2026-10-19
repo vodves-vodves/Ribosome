@@ -229,6 +229,15 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
   const schedule = () => {
     raf ||= requestAnimationFrame(frame);
   };
+  // SPA сменил маршрут: текст закреплённых окон мог исчезнуть — помечаем сразу, а не по клику на прицел
+  const checkRoute = () =>
+    setTimeout(() => {
+      if (active && anchorDead(active.anchor)) active.close();
+      pinned.forEach((b) => anchorDead(b.anchor) && b.note('Текст на странице уже не найден — страница изменилась.'));
+    }, 1000);
+  (globalThis as { navigation?: EventTarget }).navigation?.addEventListener('navigatesuccess', checkRoute, { signal });
+  addEventListener('popstate', checkRoute, { signal });
+
   addEventListener('scroll', schedule, { capture: true, passive: true, signal });
   addEventListener(
     'resize',
