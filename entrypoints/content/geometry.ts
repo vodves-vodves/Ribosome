@@ -68,6 +68,12 @@ export function placeBox(w: number, h: number, rect: DOMRect, gap: number, side?
   };
 }
 
+/** В видимую область с отступом 8 px: у закреплённого окна крестик должен оставаться доступным. */
+export function clampPos(el: HTMLElement, left: number, top: number) {
+  const vp = viewport();
+  return { left: clamp(left, 8, vp.w - el.offsetWidth - 8), top: clamp(top, 8, vp.h - el.offsetHeight - 8) };
+}
+
 export function setPos(el: HTMLElement, p: { left: number; top: number }) {
   el.style.left = `${p.left}px`;
   el.style.top = `${p.top}px`;

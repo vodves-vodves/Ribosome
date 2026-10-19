@@ -1,7 +1,9 @@
 import type { Req } from '@/shared/messages';
 import { COPY_LABEL, ICON } from '@/shared/ui/icons';
 import { copyText, createRunner, flashCopy, overlayScrollbar, render, type State, type View } from '@/shared/ui/view';
-import { anchorRect, anchorShown, placeBox, setPos, type Anchor, type Pos, type Side } from './geometry';
+import { anchorRect, anchorShown, clampPos, placeBox, setPos, type Anchor, type Pos, type Side } from './geometry';
+
+const DRAG_END = ['pointerup', 'pointercancel', 'lostpointercapture'] as const;
 
 /** Высота окна с длинным переводом: по ней выбираем сторону при открытии, а не по высоте скелета. */
 const MAX_H = 330;
@@ -41,6 +43,7 @@ export class Bubble {
     layer: HTMLElement,
     private scope: Node,
     private onClose: (b: Bubble) => void,
+    private onPin: (b: Bubble, pinned: boolean) => void,
   ) {
     const el = this.el;
     el.className = 'rb-bubble rb-surface';
@@ -56,6 +59,53 @@ export class Bubble {
       if (this.state?.kind === 'ok') flashCopy(this.v.copy, await copyText(this.state.text, this.scope));
     });
     this.v.retry.addEventListener('click', () => (this.state?.kind === 'ctx' ? location.reload() : this.open(this.anchor, this.req)));
+    this.q('.rb-pin').addEventListener('click', () => this.togglePin());
+    this.q('.rb-bh').addEventListener('pointerdown', (e) => this.drag(e));
+  }
+
+  get pinned() {
+    return this.el.classList.contains('is-pinned');
+  }
+
+  /** Закреплённое окно стоит на экране, а не у текста; открепили — сразу встаёт к своему тексту. */
+  togglePin() {
+    const on = this.el.classList.toggle('is-pinned');
+    const pin = this.q('.rb-pin');
+    pin.title = on ? 'Открепить' : 'Закрепить';
+    pin.setAttribute('aria-label', pin.title);
+    const src = this.q('.rb-src');
+    src.hidden = !on;
+    src.textContent = on ? this.req.text.replace(/\s+/g, ' ').slice(0, 300) : '';
+    this.el.style.visibility = '';
+    this.onPin(this, on);
+    if (on) return;
+    this.side = undefined;
+    this.follow();
+  }
+
+  /** Перетаскивание закреплённого окна за шапку. Тач, прерванный панорамированием, тоже отпускает окно. */
+  private drag(e: PointerEvent) {
+    if (!this.pinned || e.button !== 0 || (e.target as Element).closest('button')) return;
+    const el = this.el;
+    const bh = e.currentTarget as HTMLElement;
+    el.parentElement!.append(el); // поверх остальных закреплённых
+    const sx = e.clientX - parseFloat(el.style.left);
+    const sy = e.clientY - parseFloat(el.style.top);
+    const move = (ev: PointerEvent) => setPos(el, clampPos(el, ev.clientX - sx, ev.clientY - sy));
+    const up = () => {
+      bh.removeEventListener('pointermove', move);
+      DRAG_END.forEach((t) => bh.removeEventListener(t, up));
+      el.classList.remove('is-drag');
+    };
+    bh.setPointerCapture(e.pointerId);
+    el.classList.add('is-drag');
+    bh.addEventListener('pointermove', move);
+    DRAG_END.forEach((t) => bh.addEventListener(t, up));
+    e.preventDefault();
+  }
+
+  clampIntoView() {
+    setPos(this.el, clampPos(this.el, parseFloat(this.el.style.left), parseFloat(this.el.style.top)));
   }
 
   q<T extends HTMLElement = HTMLElement>(s: string) {
@@ -75,7 +125,7 @@ export class Bubble {
     this.state = s;
     if (s.kind === 'ok') this.lang.textContent = `${s.detected} → ${s.to}`.toUpperCase();
     render(this.v, s);
-    if (this.el.classList.contains('is-on')) return this.follow();
+    if (this.el.classList.contains('is-on')) return this.pinned ? this.clampIntoView() : this.follow();
     this.el.classList.add('is-on');
     this.follow();
     void this.el.offsetWidth;

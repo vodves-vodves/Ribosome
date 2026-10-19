@@ -66,7 +66,9 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
   trigger.innerHTML = ICON.translate;
   root.append(trigger);
 
+  /** Обычное окно: одно, привязано к тексту. Закреплённых может быть несколько, живут до перезагрузки страницы. */
   let active: Bubble | null = null;
+  const pinned = new Set<Bubble>();
   /** Выделение, ждущее клика по иконке или таймера режима «сразу». */
   let cur: Capture | null = null;
   let trigSide: Side | undefined;
@@ -78,10 +80,24 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
     cur = null;
     lift(host);
     const req = { text: c.text, from: settings!.source, to: settings!.target };
-    active ??= new Bubble(root, shadow, (b) => {
-      if (active === b) active = null;
-    });
+    active ??= new Bubble(root, shadow, onClose, onPin);
     active.open(c.anchor, req);
+  }
+
+  function onClose(b: Bubble) {
+    if (active === b) active = null;
+    pinned.delete(b);
+  }
+
+  function onPin(b: Bubble, on: boolean) {
+    if (on) {
+      pinned.add(b);
+      if (active === b) active = null;
+      return;
+    }
+    pinned.delete(b);
+    if (active && active !== b) active.close();
+    active = b;
   }
 
   function showTrigger(c: Capture) {
@@ -161,13 +177,16 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
       downSeq++;
       // решает место нажатия, а не отпускания: выделение, начатое в нашем окне, не переводим
       skipUp = e.button !== 0 || e.composedPath().includes(host) || onScrollbar(e);
-      if (!skipUp) dismiss();
+      if (skipUp) return;
+      dismiss();
+      root.classList.add('is-passive');
     },
     opts,
   );
   addEventListener(
     'mouseup',
     (e) => {
+      root.classList.remove('is-passive');
       if (e.button !== 0 || skipUp) return;
       const roots = eventRoots(e);
       const clicks = e.detail;
@@ -210,5 +229,12 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
     raf ||= requestAnimationFrame(frame);
   };
   addEventListener('scroll', schedule, { capture: true, passive: true, signal });
-  addEventListener('resize', schedule, { signal });
+  addEventListener(
+    'resize',
+    () => {
+      schedule();
+      pinned.forEach((b) => b.clampIntoView());
+    },
+    { signal },
+  );
 }
