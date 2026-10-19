@@ -183,6 +183,8 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
   }
 
   trigger.addEventListener('click', () => cur && open(cur));
+  // SmoothScroll и подобные ловят колесо на window и крутят страницу: закрытый shadow root для них — один элемент без прокрутки
+  root.addEventListener('wheel', (e) => e.stopPropagation(), { passive: true });
 
   // capture на window: редакторы и drag-библиотеки гасят события на всплытии
   const opts = { capture: true, signal };
