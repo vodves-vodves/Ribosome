@@ -1,0 +1,954 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ribosome — прототип</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ui-font:-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,"Segoe UI Variable","Segoe UI",Roboto,sans-serif;
+  --dur-fast:120ms;--dur:200ms;
+  --ease-out:cubic-bezier(0,0,.2,1);--ease-in:cubic-bezier(.4,0,1,1);
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:#fff;color:#1a1a1a;font-family:Georgia,"Times New Roman",serif;-webkit-font-smoothing:antialiased}
+::selection{background:rgba(0,122,255,.22)}
+button{font-family:inherit}
+svg{display:block}
+[hidden]{display:none!important}
+
+/* ---------- Фейковый браузер ---------- */
+.chrome{position:sticky;top:0;z-index:50;height:44px;display:flex;align-items:center;gap:10px;padding:0 12px;background:#f6f6f7;border-bottom:1px solid rgba(0,0,0,.08);font-family:var(--ui-font);font-size:13px;color:#555}
+.chrome .nav{display:flex;gap:2px}
+.chrome .nav button{width:28px;height:28px;border:0;background:transparent;border-radius:6px;color:#a0a0a5;display:grid;place-items:center}
+.chrome .nav button svg{width:16px;height:16px}
+.chrome .url{flex:1;height:30px;display:flex;align-items:center;gap:8px;padding:0 12px;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:15px;color:#3a3a3c;max-width:720px;margin:0 auto;letter-spacing:.01em}
+.chrome .url svg{width:12px;height:12px;color:#8a8a8e}
+.chrome .ext{display:flex;gap:4px;align-items:center}
+.chrome .ext button{width:30px;height:30px;border:0;background:transparent;border-radius:7px;display:grid;place-items:center;color:#6e6e73;cursor:pointer;transition:background var(--dur-fast) var(--ease-out)}
+.chrome .ext button:hover{background:rgba(0,0,0,.06)}
+.chrome .ext button.is-on{background:rgba(0,0,0,.09)}
+.chrome .ext button svg{width:16px;height:16px}
+.chrome .ext .rbicon span{width:18px;height:18px;border-radius:5px;background:linear-gradient(160deg,#5ac8fa,#007aff);display:grid;place-items:center;color:#fff}
+.chrome .ext .rbicon span svg{width:12px;height:12px}
+
+/* ---------- Статья (чужая страница) ---------- */
+.page{position:relative;max-width:680px;margin:0 auto;padding:72px 24px 200px}
+.margin-note{position:absolute;left:-250px;width:190px;margin:0;font-size:14px;line-height:1.5;font-style:italic;color:#6e6e73}
+.margin-note b{display:block;font-family:var(--ui-font);font-style:normal;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8a8a8e;margin-bottom:6px}
+.strip{overflow-x:auto;margin:28px -24px 36px;padding:4px 24px 14px;scrollbar-width:thin}
+.strip-row{display:flex;gap:14px;width:max-content}
+.strip .card{width:300px;flex:none;padding:14px 16px;border:1px solid #e5e5ea;border-radius:10px;font-family:var(--ui-font);font-size:14px;line-height:1.5;color:#3a3a3c}
+.strip .card b{display:block;font-weight:600;color:#1d1d1f;margin-bottom:2px;font-variant-numeric:tabular-nums}
+@media (max-width:1180px){.margin-note{position:static;width:auto;margin:0 0 24px}}
+.page .kicker{font-family:var(--ui-font);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8a8a8e;margin:0 0 18px}
+.page h1{font-size:42px;line-height:1.1;letter-spacing:-.01em;margin:0 0 28px;font-weight:400;text-wrap:balance}
+.page h2{font-size:27px;line-height:1.2;font-weight:400;letter-spacing:-.005em;margin:52px 0 18px;text-wrap:balance}
+.page p{font-size:19px;line-height:1.6;margin:0 0 24px;text-wrap:pretty}
+.page p.ru{color:#3a3a3c}
+.page blockquote{margin:40px 0;padding-left:20px;border-left:2px solid #e5e5ea;font-style:italic;font-size:22px;line-height:1.45;color:#333}
+.page .meta{font-family:var(--ui-font);font-size:13px;color:#8a8a8e;margin-top:48px;letter-spacing:.01em}
+
+/* ---------- Ribosome UI (расширение) ---------- */
+#rb{position:fixed;inset:0;z-index:100;pointer-events:none;direction:ltr;user-select:none;font-family:var(--ui-font);font-size:14px;line-height:1.45;color:var(--t1);
+  --accent:#007aff;--red:#ff3b30;
+  --t1:#1d1d1f;--t2:rgba(60,60,67,.72);--t3:rgba(60,60,67,.45);
+  --sep:rgba(60,60,67,.18);--fill:rgba(120,120,128,.12);--fill2:rgba(120,120,128,.2);
+  --glass:rgba(248,248,250,.86);--grouped:#f2f2f7;--group:#fff;--seg-on:#fff;
+  --shadow:0 0 0 .5px rgba(0,0,0,.09),0 10px 32px rgba(0,0,0,.14),0 2px 6px rgba(0,0,0,.06);
+  --hairline:rgba(255,255,255,.6);--ring:rgba(0,122,255,.18);
+}
+#rb[data-theme=dark]{
+  --accent:#0a84ff;--red:#ff453a;
+  --t1:#f5f5f7;--t2:rgba(235,235,245,.66);--t3:rgba(235,235,245,.4);
+  --sep:rgba(84,84,88,.6);--fill:rgba(120,120,128,.24);--fill2:rgba(120,120,128,.34);
+  --glass:rgba(34,34,38,.88);--grouped:#1c1c1e;--group:#2c2c2e;--seg-on:#636366;
+  --shadow:0 0 0 .5px rgba(255,255,255,.12),0 12px 36px rgba(0,0,0,.5),0 2px 6px rgba(0,0,0,.3);
+  --hairline:rgba(255,255,255,.08);--ring:rgba(10,132,255,.3);
+}
+#rb>*{pointer-events:auto}
+#rb button{cursor:pointer}
+
+/* скроллбары в UI расширения: системный прячем, рисуем свой ползунок как в macOS — виден при прокрутке и наведении */
+#rb .rb-tab,#rb .rb-bt,#rb .rb-ta{scrollbar-width:none}
+#rb .rb-tab::-webkit-scrollbar,#rb .rb-bt::-webkit-scrollbar,#rb .rb-ta::-webkit-scrollbar{display:none}
+.rb-thumb{position:absolute;right:4px;width:5px;border-radius:3px;background:rgba(0,0,0,.28);opacity:0;pointer-events:none;transition:opacity 180ms var(--ease-out);z-index:5}
+#rb[data-theme=dark] .rb-thumb{background:rgba(255,255,255,.32)}
+.rb-popup:hover .rb-thumb,.rb-bubble:hover .rb-thumb,.rb-thumb.is-scrolling{opacity:1}
+
+/* выпадающие списки: нативный select с appearance:base-select (Chrome 135+) — панель рисуем сами */
+#rb select,#rb ::picker(select){appearance:base-select}
+#rb select::picker-icon{display:none}
+#rb ::picker(select){border:0;padding:5px;margin:6px 0;min-width:anchor-size(width);border-radius:12px;background:var(--glass);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);box-shadow:var(--shadow),inset 0 0 0 .5px var(--hairline);color:var(--t1);opacity:0;transform:scale(.97);transform-origin:top center;transition:opacity 140ms var(--ease-out),transform 140ms var(--ease-out),display 140ms allow-discrete,overlay 140ms allow-discrete}
+#rb ::picker(select):popover-open{opacity:1;transform:none}
+@starting-style{#rb ::picker(select):popover-open{opacity:0;transform:scale(.97)}}
+#rb option{display:flex;align-items:center;gap:8px;min-width:160px;padding:6px 14px 6px 8px;border-radius:7px;font:400 14px/1.3 var(--ui-font);color:var(--t1);cursor:pointer;direction:ltr;text-align:left}
+#rb option:hover,#rb option:focus-visible{background:var(--accent);color:#fff;outline:0}
+#rb option::checkmark{width:14px;flex:none;font-size:12px;font-weight:600;text-align:center}
+.rb-surface{background:var(--glass);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);box-shadow:var(--shadow),inset 0 0 0 .5px var(--hairline)}
+
+/* кнопки */
+.rb-btn{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px 0 8px;border:0;border-radius:8px;background:var(--fill);color:var(--t1);font:500 13px/1 var(--ui-font);letter-spacing:.01em;white-space:nowrap;transition:background var(--dur-fast) var(--ease-out),transform 90ms var(--ease-out),color var(--dur-fast)}
+.rb-btn svg{width:14px;height:14px}
+.rb-btn:hover{background:var(--fill2)}
+.rb-btn:active{transform:scale(.97)}
+.rb-btn.is-done{color:var(--accent)}
+.rb-btn.is-fail{color:var(--red)}
+.rb-ib{width:22px;height:22px;border:0;border-radius:11px;background:var(--fill);color:var(--t2);display:grid;place-items:center;transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast)}
+.rb-ib:hover{background:var(--fill2)}
+.rb-ib svg{width:11px;height:11px}
+
+/* иконка-триггер у выделения */
+.rb-trigger{position:fixed;display:none;width:28px;height:28px;border:0;border-radius:14px;place-items:center;color:var(--accent);opacity:0;transform:scale(.9);transition:opacity var(--dur-fast) var(--ease-out),transform var(--dur-fast) var(--ease-out)}
+.rb-trigger.is-on{display:grid}
+.rb-trigger.is-in{opacity:1;transform:none}
+.rb-trigger svg{width:16px;height:16px}
+
+/* окно перевода */
+.rb-bubble{position:fixed;display:none;width:max-content;max-width:min(380px,calc(100vw - 16px));border-radius:14px;opacity:0;transform:scale(.96);transition:opacity 160ms var(--ease-out),transform 160ms var(--ease-out)}
+.rb-bubble.is-on{display:block}
+.rb-bubble.is-in{opacity:1;transform:none}
+.rb-bh{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 10px 0 14px}
+.rb-hb{display:flex;gap:4px}
+.rb-lang{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);white-space:nowrap}
+/* выделять можно только сам перевод и поля popup — иначе выделение со страницы «заезжает» в наше окно */
+.rb-bt,.rb-ta,.rb-res{user-select:text}
+.rb-bt{padding:8px 14px 0;font-size:15px;line-height:1.45;max-height:220px;overflow:auto;color:var(--t1);text-wrap:pretty;overflow-wrap:anywhere;min-width:220px}
+.rb-bt.is-empty{color:var(--t3)}
+.rb-note{padding:6px 14px 0;font-size:12px;line-height:1.4;color:var(--t2);letter-spacing:.01em;max-width:320px}
+.rb-bf{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 10px 10px 14px}
+.rb-prov{font-size:12px;color:var(--t3);letter-spacing:.01em;white-space:nowrap}
+.rb-acts{display:flex;gap:6px}
+/* порядок слоёв: триггер выше всего, активное окно выше закреплённых */
+.rb-trigger{z-index:3}
+.rb-bubble{z-index:2}
+.rb-bubble.is-pinned{z-index:1}
+.rb-loc{display:none}
+.rb-bubble.is-pinned .rb-loc{display:grid}
+.rb-src{display:block;width:100%;max-width:340px;margin:6px 0 -2px;padding:0 14px;border:0;background:transparent;text-align:left;font:400 12px/1.4 var(--ui-font);letter-spacing:.01em;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color var(--dur-fast)}
+.rb-src:hover{color:var(--accent)}
+.rb-bubble.is-pinned .rb-pin{background:var(--accent);color:#fff}
+.rb-flash{position:fixed;pointer-events:none;border-radius:3px;background:var(--accent);opacity:.26;animation:rb-flash 1.4s var(--ease-out) forwards}
+.rb-flash.is-hold{animation:none}
+@keyframes rb-flash{0%,45%{opacity:.26}100%{opacity:0}}
+.rb-bubble.is-pinned{transition:opacity 160ms var(--ease-out),transform 160ms var(--ease-out),top 220ms var(--ease-out),left 220ms var(--ease-out)}
+.rb-bubble.is-pinned .rb-bh{cursor:grab;touch-action:none}
+.rb-bubble.is-drag{transition:none}
+.rb-bubble.is-drag .rb-bh{cursor:grabbing}
+
+/* скелет загрузки */
+.rb-sk{display:grid;gap:8px;padding:3px 0 2px;width:240px;max-width:100%}
+.rb-sk i{display:block;height:11px;border-radius:6px;background:linear-gradient(90deg,var(--fill) 25%,var(--fill2) 50%,var(--fill) 75%);background-size:200% 100%;animation:rb-sh 1.1s linear infinite}
+.rb-sk i:nth-child(2){width:72%}
+@keyframes rb-sh{to{background-position:-200% 0}}
+
+/* ---------- Popup расширения ---------- */
+.rb-popup{position:fixed;top:50px;right:12px;z-index:4;width:360px;max-height:min(600px,calc(100vh - 62px));display:none;flex-direction:column;border-radius:14px;overflow:hidden;opacity:0;transform:translateY(-4px) scale(.98);transform-origin:top right;transition:opacity 180ms var(--ease-out),transform 180ms var(--ease-out)}
+.rb-popup.is-on{display:flex}
+.rb-popup.is-in{opacity:1;transform:none}
+.rb-ph{display:flex;align-items:center;gap:10px;padding:12px 14px 10px}
+.rb-ph .logo{width:22px;height:22px;border-radius:6px;background:linear-gradient(160deg,#5ac8fa,#007aff);display:grid;place-items:center;color:#fff}
+.rb-ph .logo svg{width:14px;height:14px}
+.rb-ph .name{font-weight:600;font-size:14px;letter-spacing:-.005em}
+.rb-seg{display:flex;padding:2px;background:var(--fill);border-radius:9px;margin:0 14px 12px}
+.rb-seg button{flex:1;height:26px;border:0;border-radius:7px;background:transparent;color:var(--t1);font:500 13px/1 var(--ui-font);letter-spacing:.01em;transition:background var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
+.rb-seg button.is-on{background:var(--seg-on);box-shadow:0 1px 3px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04)}
+.rb-seg.sm{margin:0;width:196px;padding:2px}
+.rb-seg.sm button{height:22px;font-size:12px}
+.rb-tab{display:none;padding:0 14px 12px;overflow:auto;min-height:0}
+.rb-tab.is-on{display:block}
+
+/* вкладка Перевод */
+.rb-langs{display:grid;grid-template-columns:1fr 32px 1fr;gap:8px;align-items:center;margin-bottom:10px}
+.rb-pill{position:relative}
+.rb-pill select{appearance:none;-webkit-appearance:none;display:flex;align-items:center;justify-content:center;width:100%;height:34px;padding:0 26px 0 14px;border:0;border-radius:17px;background:var(--fill);color:var(--t1);font:500 14px var(--ui-font);cursor:pointer;text-align:center;text-align-last:center;outline:0}
+.rb-pill select:focus-visible{box-shadow:0 0 0 3px var(--ring)}
+.rb-pill svg{position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--t2);width:11px;height:11px}
+.rb-swap{width:32px;height:32px;border:0;border-radius:16px;background:var(--fill);color:var(--t1);display:grid;place-items:center;transition:background var(--dur-fast) var(--ease-out),transform 90ms var(--ease-out)}
+.rb-swap:hover{background:var(--fill2)}
+.rb-swap:active{transform:scale(.95)}
+.rb-swap svg{width:15px;height:15px}
+.rb-ta{display:block;width:100%;min-height:96px;max-height:180px;field-sizing:content;resize:none;border:0;border-radius:10px;padding:10px 12px;background:var(--group);color:var(--t1);font:400 15px/1.45 var(--ui-font);outline:0;box-shadow:inset 0 0 0 1px var(--sep);transition:box-shadow var(--dur-fast) var(--ease-out)}
+.rb-ta::placeholder{color:var(--t3)}
+.rb-ta:focus{box-shadow:inset 0 0 0 1px var(--accent),0 0 0 3px var(--ring)}
+.rb-cnt{text-align:right;font-size:11px;color:var(--t3);margin:4px 2px 0;letter-spacing:.01em;font-variant-numeric:tabular-nums}
+.rb-cnt.is-over{color:var(--red)}
+.rb-tawrap{position:relative}
+.rb-res{position:relative;margin-top:6px;border-radius:10px;background:var(--group);box-shadow:inset 0 0 0 1px var(--sep);padding:10px 12px;min-height:110px;display:flex;flex-direction:column}
+.rb-res .lab{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+.rb-res .rb-bt{padding:0;max-height:160px;min-width:0}
+.rb-res .rb-note{padding:6px 0 0}
+.rb-res .bar{display:flex;justify-content:flex-end;gap:6px;margin-top:8px}
+
+/* вкладка Настройки — сгруппированные списки */
+.rb-set{display:grid;gap:12px}
+.rb-grp h4{margin:0 0 5px 12px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+.rb-grp .box{background:var(--group);border-radius:10px}
+.rb-row{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:38px;padding:0 12px;font-size:14px}
+.rb-row+.rb-row::before{content:"";position:absolute;left:12px;right:0;top:0;height:1px;background:var(--sep)}
+.rb-row .val{position:relative;display:flex;align-items:center;color:var(--t2)}
+.rb-row .val select{appearance:none;-webkit-appearance:none;display:flex;align-items:center;justify-content:flex-end;border:0;background:transparent;color:var(--t2);font:400 14px var(--ui-font);padding:6px 18px 6px 6px;cursor:pointer;text-align:right;outline:0;border-radius:6px}
+.rb-row .val select:focus-visible{box-shadow:0 0 0 3px var(--ring)}
+.rb-row .val>svg{position:absolute;right:2px;top:50%;transform:translateY(-50%);width:11px;height:11px;pointer-events:none;color:var(--t3)}
+.rb-row.is-pick{cursor:pointer}
+.rb-row.is-pick:hover{background:rgba(120,120,128,.06)}
+.rb-row.is-pick:first-child{border-radius:10px 10px 0 0}
+.rb-row.is-pick:last-child{border-radius:0 0 10px 10px}
+.rb-row .ck{width:16px;height:16px;color:var(--accent);opacity:0;transition:opacity var(--dur-fast) var(--ease-out)}
+.rb-row.is-sel .ck{opacity:1}
+.rb-grp .note{margin:5px 12px 0;font-size:12px;line-height:1.35;color:var(--t2);letter-spacing:.01em}
+.rb-pf{display:flex;justify-content:space-between;padding:2px 14px 10px;font-size:11px;color:var(--t3);letter-spacing:.01em;flex-shrink:0}
+
+/* ---------- Панель прототипа ---------- */
+.proto{position:fixed;left:14px;bottom:14px;z-index:200;display:flex;align-items:center;gap:14px;padding:8px 8px 8px 14px;border-radius:12px;background:rgba(28,28,30,.9);color:#f5f5f7;font:13px/1.35 var(--ui-font);box-shadow:0 8px 24px rgba(0,0,0,.3);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+.proto .hint{color:rgba(235,235,245,.6);max-width:230px}
+.proto .hint b{color:#f5f5f7;font-weight:600}
+.proto label{display:flex;align-items:center;gap:8px;color:rgba(235,235,245,.6);white-space:nowrap}
+.proto select{height:28px;border:0;border-radius:7px;background:rgba(255,255,255,.12);color:#fff;font:500 13px var(--ui-font);padding:0 8px;cursor:pointer;outline:0}
+.proto select option{color:#111}
+
+@media (prefers-reduced-motion:reduce){
+  .rb-trigger,.rb-bubble,.rb-bubble.is-pinned,.rb-popup{transition:opacity 120ms var(--ease-out);transform:none!important}
+  .rb-sk i{animation:none}
+}
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <div class="nav">
+    <button aria-label="Назад"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3 5 8l5 5"/></svg></button>
+    <button aria-label="Вперёд"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 3 5 5-5 5"/></svg></button>
+    <button aria-label="Обновить"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 8a5 5 0 1 1-1.5-3.6"/><path d="M13 3v3h-3"/></svg></button>
+  </div>
+  <div class="url"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.5" y="7" width="9" height="6.5" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>cellreview.org/essays/the-ribosome</div>
+  <div class="ext">
+    <button aria-label="Расширения"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M6 2.5a1.5 1.5 0 0 1 3 0V4h2.5A1.5 1.5 0 0 1 13 5.5V8h-1.5a1.5 1.5 0 0 0 0 3H13v2.5a1.5 1.5 0 0 1-1.5 1.5H9v-1.5a1.5 1.5 0 0 0-3 0V15H3.5A1.5 1.5 0 0 1 2 13.5V11h1.5a1.5 1.5 0 0 0 0-3H2V5.5A1.5 1.5 0 0 1 3.5 4H6V2.5Z"/></svg></button>
+    <button class="rbicon" id="ext-btn" aria-label="Ribosome"><span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5h6.5M5.25 3v1.5M7.2 4.5c-.6 2.4-2.2 4.4-4.4 5.8M4.2 6.6c.8 1.7 2.1 3 3.8 3.8M8.6 13.5l2.3-6 2.3 6M9.5 11.4h2.8"/></svg></span></button>
+  </div>
+</div>
+
+<main class="page">
+  <p class="kicker">Essay · Molecular biology</p>
+  <h1>The ribosome: a machine that reads</h1>
+  <p>Every living cell contains thousands of ribosomes. They read messenger RNA three letters at a time and assemble proteins from amino acids.</p>
+  <p>A ribosome is made of two subunits. The small subunit decodes the message, while the large subunit links amino acids into a growing chain.</p>
+  <p>Bacterial ribosomes differ slightly from ours. That difference is why some antibiotics can stop bacteria without harming human cells.</p>
+  <p class="ru">Рибосома читает текст, которого не понимает, и всё равно собирает из него нечто живое.</p>
+  <p>Ribosomes are ancient. Their core has barely changed in three billion years, which makes them one of the most conserved structures in biology.</p>
+  <p>A single ribosome adds about twenty amino acids per second. A cell that needs a protein quickly simply puts more ribosomes on the same message.</p>
+  <p>Errors happen, but rarely: roughly one wrong amino acid in ten thousand. Proofreading steps catch most mistakes before the chain is released.</p>
+  <p>When the ribosome reaches a stop signal, it lets go. The finished protein folds, and the two subunits drift apart to look for the next message.</p>
+
+  <h2>How the message is read</h2>
+  <p>The message arrives as a strand of messenger RNA. Each group of three bases, called a codon, stands for one amino acid or for a stop.</p>
+  <p>Transfer RNA molecules do the matching. One end of each carries an anticodon that pairs with the message, the other end carries the amino acid.</p>
+  <p>The ribosome holds three of these molecules at once. As it steps forward by one codon, the chain is handed from one to the next.</p>
+  <p>A short timeline, from a smudge under the microscope to atoms.</p>
+  <div class="strip">
+    <div class="strip-row">
+      <div class="card"><b>1955</b>Palade sees dense particles in the cytoplasm.</div>
+      <div class="card"><b>1958</b>The name ribosome is coined at a symposium.</div>
+      <div class="card"><b>1961</b>Messenger RNA is discovered.</div>
+      <div class="card"><b>1974</b>Palade shares the Nobel Prize for the discovery.</div>
+      <div class="card"><b>2000</b>The first atomic structure of a ribosomal subunit.</div>
+      <div class="card"><b>2009</b>Nobel Prize for the structure of the ribosome.</div>
+    </div>
+  </div>
+
+  <aside class="margin-note"><b>Note</b>Early drawings showed the ribosome as a simple sphere; it took thirty years to see the two subunits.</aside>
+  <h2>A factory with no manager</h2>
+  <p>Nobody tells a ribosome what to build. The order of codons is the only instruction it ever receives.</p>
+  <p>Yet the output is reliable enough to run a body for decades. Reliability comes from chemistry, not supervision.</p>
+  <p>A human cell can hold ten million ribosomes. In a growing bacterium they make up a quarter of its dry mass.</p>
+
+  <h2>Why antibiotics work</h2>
+  <p>Many antibiotics are simply molecules that jam the bacterial ribosome. Tetracycline blocks the slot where transfer RNA should land.</p>
+  <p>Erythromycin plugs the tunnel through which the new chain exits. The ribosome keeps reading, but nothing can leave.</p>
+  <p>Our own ribosomes are shaped differently, so the drugs mostly leave them alone. Mostly, not entirely: that gap is where side effects live.</p>
+
+  <h2>What we still do not know</h2>
+  <p>We can photograph a ribosome down to single atoms. We still cannot say exactly why it almost never slips by one base.</p>
+  <p>Some researchers believe the answer is in how the machine wobbles. Others think the message itself carries hidden rhythm.</p>
+  <p>Either way, the oldest reader on Earth still has pages we cannot turn.</p>
+
+  <blockquote>Translation, in biology as in language, is the act of turning one alphabet into another.</blockquote>
+  <p class="meta">12 min read · Updated October 2026</p>
+</main>
+
+<template id="rb-bubble-tpl">
+  <div class="rb-bubble rb-surface" role="dialog" aria-label="Перевод">
+    <div class="rb-bh">
+      <span class="rb-lang">EN → RU</span>
+      <span class="rb-hb">
+        <button class="rb-ib rb-loc" aria-label="Показать на странице" title="Показать на странице"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="3.6"/><path d="M8 1.5v2.3M8 12.2v2.3M1.5 8h2.3M12.2 8h2.3"/></svg></button>
+        <button class="rb-ib rb-pin" aria-label="Закрепить"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5h4M8 2.5v3M5 5.5h6l1.2 4.5H3.8L5 5.5ZM8 10v3.5"/></svg></button>
+        <button class="rb-ib rb-x" aria-label="Закрыть"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 2l6 6M8 2l-6 6"/></svg></button>
+      </span>
+    </div>
+    <button class="rb-src" hidden title="Показать на странице" dir="auto"></button>
+    <div class="rb-bt" dir="auto"></div>
+    <div class="rb-note" hidden></div>
+    <div class="rb-bf">
+      <span class="rb-prov">Google Translate</span>
+      <span class="rb-acts">
+        <button class="rb-btn rb-retry" hidden>Повторить</button>
+        <button class="rb-btn rb-copy" hidden>
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.8"/><path d="M10.5 5.5V4a1.5 1.5 0 0 0-1.5-1.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5"/></svg>
+          <span class="lbl">Копировать</span>
+        </button>
+      </span>
+    </div>
+  </div>
+</template>
+
+<div id="rb" data-theme="light">
+
+  <button class="rb-trigger rb-surface" id="rb-trigger" aria-label="Перевести">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5h6.5M5.25 3v1.5M7.2 4.5c-.6 2.4-2.2 4.4-4.4 5.8M4.2 6.6c.8 1.7 2.1 3 3.8 3.8M8.6 13.5l2.3-6 2.3 6M9.5 11.4h2.8"/></svg>
+  </button>
+
+  <div class="rb-popup rb-surface" id="rb-popup">
+    <div class="rb-ph">
+      <span class="logo"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5h6.5M5.25 3v1.5M7.2 4.5c-.6 2.4-2.2 4.4-4.4 5.8M4.2 6.6c.8 1.7 2.1 3 3.8 3.8M8.6 13.5l2.3-6 2.3 6M9.5 11.4h2.8"/></svg></span>
+      <span class="name">Ribosome</span>
+    </div>
+    <div class="rb-seg" id="rb-tabs">
+      <button class="is-on" data-tab="tr">Перевод</button>
+      <button data-tab="set">Настройки</button>
+    </div>
+
+    <section class="rb-tab is-on" data-tab="tr">
+      <div class="rb-langs">
+        <label class="rb-pill"><select id="tr-from"></select><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5 5 6.5l3-3"/></svg></label>
+        <button class="rb-swap" id="tr-swap" aria-label="Поменять языки"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 5.5h10l-2.5-2.5M13.5 10.5h-10L6 13"/></svg></button>
+        <label class="rb-pill"><select id="tr-to"></select><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5 5 6.5l3-3"/></svg></label>
+      </div>
+      <div class="rb-tawrap"><textarea class="rb-ta" id="tr-in" placeholder="Введите текст…" rows="4"></textarea></div>
+      <div class="rb-cnt" id="tr-cnt">0 / 5000</div>
+      <div class="rb-res">
+        <div class="lab" id="tr-lab">Русский</div>
+        <div class="rb-bt is-empty" id="tr-out" dir="auto">Перевод появится здесь</div>
+        <div class="rb-note" id="tr-note" hidden></div>
+        <div class="bar">
+          <button class="rb-btn" id="tr-retry" hidden>Повторить</button>
+          <button class="rb-btn rb-copy" id="tr-copy" hidden>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.8"/><path d="M10.5 5.5V4a1.5 1.5 0 0 0-1.5-1.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5"/></svg>
+            <span class="lbl">Копировать</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="rb-tab" data-tab="set">
+      <div class="rb-set">
+        <div class="rb-grp">
+          <h4>Языки</h4>
+          <div class="box">
+            <div class="rb-row"><span>Переводить на</span><span class="val"><select data-set="target"></select><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 2 6.5 5l-3 3"/></svg></span></div>
+            <div class="rb-row"><span>Второй язык</span><span class="val"><select data-set="secondary"></select><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 2 6.5 5l-3 3"/></svg></span></div>
+            <div class="rb-row"><span>Язык источника</span><span class="val"><select data-set="source"></select><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 2 6.5 5l-3 3"/></svg></span></div>
+          </div>
+          <p class="note">Если выделенный текст уже на языке перевода, он переводится на второй язык.</p>
+        </div>
+
+        <div class="rb-grp">
+          <h4>Срабатывание</h4>
+          <div class="box" id="set-mode">
+            <div class="rb-row is-pick" data-mode="icon"><span>Иконка у выделения</span><svg class="ck" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 8.5 3.2 3L13 4.5"/></svg></div>
+            <div class="rb-row is-pick" data-mode="instant"><span>Сразу после выделения</span><svg class="ck" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 8.5 3.2 3L13 4.5"/></svg></div>
+          </div>
+          <p class="note">В режиме «сразу» окно появляется через 0,3 с после выделения.</p>
+        </div>
+
+        <div class="rb-grp">
+          <h4>Поставщик</h4>
+          <div class="box">
+            <div class="rb-row"><span>Сервис</span><span class="val"><select data-set="provider"><option value="google">Google Translate</option></select><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 2 6.5 5l-3 3"/></svg></span></div>
+          </div>
+          <p class="note">Бесплатно, без ключа. DeepL и другие — позже.</p>
+        </div>
+
+        <div class="rb-grp">
+          <h4>Внешний вид</h4>
+          <div class="box">
+            <div class="rb-row"><span>Тема</span>
+              <div class="rb-seg sm" id="set-theme">
+                <button data-theme="auto">Авто</button>
+                <button data-theme="light">Светлая</button>
+                <button data-theme="dark">Тёмная</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="rb-pf"><span>Ribosome 0.1</span><span>Google Translate</span></div>
+  </div>
+</div>
+
+<div class="proto">
+  <div class="hint"><b>Прототип.</b> Выдели текст в статье. Иконка расширения — справа вверху.</div>
+  <label>Состояние
+    <select id="proto-state">
+      <option value="auto">Обычное</option>
+      <option value="cached">Из кэша — мгновенно</option>
+      <option value="queued">Лимит — в очереди</option>
+      <option value="429">Google вернул 429 — пауза</option>
+      <option value="offline">Нет сети</option>
+      <option value="5xx">Google не отвечает</option>
+      <option value="truncated">Текст длиннее 5000</option>
+      <option value="nothing">Нечего переводить</option>
+      <option value="ctx">Расширение обновилось</option>
+      <option value="copyfail">Копирование не удалось</option>
+      <option value="pinned">Закреплённое окно</option>
+    </select>
+  </label>
+</div>
+
+<script>
+(() => {
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+/* ---------- Фейковый переводчик (только текст статьи) ---------- */
+const LANGS = { auto: 'Авто', ru: 'Русский', en: 'English', de: 'Deutsch', es: 'Español', fr: 'Français', zh: '中文', ja: '日本語' };
+const PAIRS = [
+  ['The ribosome: a machine that reads', 'Рибосома: машина, которая читает'],
+  ['Every living cell contains thousands of ribosomes.', 'Каждая живая клетка содержит тысячи рибосом.'],
+  ['They read messenger RNA three letters at a time and assemble proteins from amino acids.', 'Они читают матричную РНК по три буквы за раз и собирают белки из аминокислот.'],
+  ['A ribosome is made of two subunits.', 'Рибосома состоит из двух субъединиц.'],
+  ['The small subunit decodes the message, while the large subunit links amino acids into a growing chain.', 'Малая субъединица расшифровывает сообщение, а большая соединяет аминокислоты в растущую цепь.'],
+  ['Bacterial ribosomes differ slightly from ours.', 'Бактериальные рибосомы немного отличаются от наших.'],
+  ['That difference is why some antibiotics can stop bacteria without harming human cells.', 'Именно это различие позволяет некоторым антибиотикам останавливать бактерии, не вредя клеткам человека.'],
+  ['The ribosome reads a text it does not understand, and still assembles something living out of it.', 'Рибосома читает текст, которого не понимает, и всё равно собирает из него нечто живое.'],
+  ['Ribosomes are ancient.', 'Рибосомы древние.'],
+  ['Their core has barely changed in three billion years, which makes them one of the most conserved structures in biology.', 'Их ядро почти не менялось три миллиарда лет, и это одна из самых консервативных структур в биологии.'],
+  ['A single ribosome adds about twenty amino acids per second.', 'Одна рибосома присоединяет около двадцати аминокислот в секунду.'],
+  ['A cell that needs a protein quickly simply puts more ribosomes on the same message.', 'Клетке, которой белок нужен быстро, достаточно посадить на одно сообщение больше рибосом.'],
+  ['Errors happen, but rarely: roughly one wrong amino acid in ten thousand.', 'Ошибки случаются, но редко: примерно одна неверная аминокислота на десять тысяч.'],
+  ['Proofreading steps catch most mistakes before the chain is released.', 'Проверочные шаги ловят большинство ошибок до того, как цепь будет отпущена.'],
+  ['When the ribosome reaches a stop signal, it lets go.', 'Дойдя до стоп-сигнала, рибосома отпускает цепь.'],
+  ['The finished protein folds, and the two subunits drift apart to look for the next message.', 'Готовый белок сворачивается, а две субъединицы расходятся искать следующее сообщение.'],
+  ['How the message is read', 'Как читается сообщение'],
+  ['The message arrives as a strand of messenger RNA.', 'Сообщение приходит в виде нити матричной РНК.'],
+  ['Each group of three bases, called a codon, stands for one amino acid or for a stop.', 'Каждая группа из трёх оснований — кодон — означает одну аминокислоту или остановку.'],
+  ['Transfer RNA molecules do the matching.', 'Сопоставлением занимаются молекулы транспортной РНК.'],
+  ['One end of each carries an anticodon that pairs with the message, the other end carries the amino acid.', 'Один конец несёт антикодон, который спаривается с сообщением, другой — аминокислоту.'],
+  ['The ribosome holds three of these molecules at once.', 'Рибосома удерживает три такие молекулы одновременно.'],
+  ['As it steps forward by one codon, the chain is handed from one to the next.', 'Когда она шагает вперёд на один кодон, цепь передаётся от одной к другой.'],
+  ['A short timeline, from a smudge under the microscope to atoms.', 'Краткая хронология: от пятнышка под микроскопом до атомов.'],
+  ['Palade sees dense particles in the cytoplasm.', 'Паладе видит плотные частицы в цитоплазме.'],
+  ['The name ribosome is coined at a symposium.', 'На симпозиуме придумано слово «рибосома».'],
+  ['Messenger RNA is discovered.', 'Открыта матричная РНК.'],
+  ['Palade shares the Nobel Prize for the discovery.', 'Паладе делит Нобелевскую премию за это открытие.'],
+  ['The first atomic structure of a ribosomal subunit.', 'Первая атомная структура субъединицы рибосомы.'],
+  ['Nobel Prize for the structure of the ribosome.', 'Нобелевская премия за структуру рибосомы.'],
+  ['Early drawings showed the ribosome as a simple sphere; it took thirty years to see the two subunits.', 'На ранних рисунках рибосома выглядела простым шариком; чтобы разглядеть две субъединицы, понадобилось тридцать лет.'],
+  ['A factory with no manager', 'Фабрика без начальника'],
+  ['Nobody tells a ribosome what to build.', 'Никто не говорит рибосоме, что строить.'],
+  ['The order of codons is the only instruction it ever receives.', 'Порядок кодонов — единственная инструкция, которую она получает.'],
+  ['Yet the output is reliable enough to run a body for decades.', 'И всё же результат достаточно надёжен, чтобы тело работало десятилетиями.'],
+  ['Reliability comes from chemistry, not supervision.', 'Надёжность берётся из химии, а не из надзора.'],
+  ['A human cell can hold ten million ribosomes.', 'В человеческой клетке может быть десять миллионов рибосом.'],
+  ['In a growing bacterium they make up a quarter of its dry mass.', 'У растущей бактерии они составляют четверть её сухой массы.'],
+  ['Why antibiotics work', 'Почему работают антибиотики'],
+  ['Many antibiotics are simply molecules that jam the bacterial ribosome.', 'Многие антибиотики — это просто молекулы, которые заклинивают бактериальную рибосому.'],
+  ['Tetracycline blocks the slot where transfer RNA should land.', 'Тетрациклин перекрывает место, куда должна встать транспортная РНК.'],
+  ['Erythromycin plugs the tunnel through which the new chain exits.', 'Эритромицин затыкает туннель, по которому выходит новая цепь.'],
+  ['The ribosome keeps reading, but nothing can leave.', 'Рибосома продолжает читать, но ничто не может выйти.'],
+  ['Our own ribosomes are shaped differently, so the drugs mostly leave them alone.', 'Наши собственные рибосомы устроены иначе, поэтому лекарства их почти не трогают.'],
+  ['Mostly, not entirely: that gap is where side effects live.', 'Почти, но не совсем: в этом зазоре и живут побочные эффекты.'],
+  ['What we still do not know', 'Чего мы ещё не знаем'],
+  ['We can photograph a ribosome down to single atoms.', 'Мы умеем фотографировать рибосому с точностью до атома.'],
+  ['We still cannot say exactly why it almost never slips by one base.', 'Но до сих пор не можем точно сказать, почему она почти никогда не сбивается на одно основание.'],
+  ['Some researchers believe the answer is in how the machine wobbles.', 'Одни исследователи считают, что ответ — в том, как машина покачивается.'],
+  ['Others think the message itself carries hidden rhythm.', 'Другие — что скрытый ритм несёт само сообщение.'],
+  ['Either way, the oldest reader on Earth still has pages we cannot turn.', 'Так или иначе, у самого старого читателя на Земле всё ещё есть страницы, которые мы не можем перевернуть.'],
+  ['Translation, in biology as in language, is the act of turning one alphabet into another.', 'Трансляция — в биологии, как и в языке, — это превращение одного алфавита в другой.'],
+];
+const WORDS = [
+  ['ribosome', 'рибосома'], ['ribosomes', 'рибосомы'], ['cell', 'клетка'], ['cells', 'клетки'], ['protein', 'белок'], ['proteins', 'белки'],
+  ['chain', 'цепь'], ['antibiotics', 'антибиотики'], ['subunit', 'субъединица'], ['subunits', 'субъединицы'], ['message', 'сообщение'],
+  ['alphabet', 'алфавит'], ['machine', 'машина'], ['letters', 'буквы'], ['translation', 'трансляция'], ['language', 'язык'],
+  ['amino acids', 'аминокислоты'], ['messenger RNA', 'матричная РНК'], ['bacteria', 'бактерии'], ['living', 'живой'], ['reads', 'читает'],
+];
+const norm = s => s.replace(/\s+/g, ' ').trim().replace(/^[«"“(]+/, '').replace(/[.,;:!?…»"”)]+$/, '').toLowerCase();
+const EN2RU = new Map(), RU2EN = new Map(), SENT = { en: [], ru: [] };
+for (const [en, ru] of PAIRS) { EN2RU.set(norm(en), ru); RU2EN.set(norm(ru), en); SENT.en.push(en); SENT.ru.push(ru); }
+for (const [en, ru] of WORDS) { EN2RU.set(norm(en), ru); RU2EN.set(norm(ru), en); }
+
+function lookup(text, from, to) {
+  const map = from === 'en' && to === 'ru' ? EN2RU : from === 'ru' && to === 'en' ? RU2EN : null;
+  if (!map) return null;
+  const key = norm(text);
+  if (map.has(key)) return map.get(key);
+  const hits = SENT[from].filter(s => key.includes(norm(s)) || norm(s).includes(key));
+  return hits.length ? hits.map(s => map.get(norm(s))).join(' ') : null;
+}
+function translate(text, from = 'auto', to) {
+  const det = from === 'auto' ? (/[Ѐ-ӿ]/.test(text) ? 'ru' : 'en') : from;
+  let t = to || S.target;
+  if (t === det) t = S.secondary;
+  return { det, to: t, text: lookup(text, det, t) };
+}
+function fallback(r) {
+  const supported = (r.det === 'en' && r.to === 'ru') || (r.det === 'ru' && r.to === 'en');
+  return supported ? 'В прототипе переводится только текст статьи.' : `Перевод на ${LANGS[r.to]} появится с реальным провайдером.`;
+}
+
+/* ---------- Настройки ---------- */
+const DEF = { target: 'ru', secondary: 'en', source: 'auto', mode: 'icon', provider: 'google', theme: 'auto' };
+let S = { ...DEF };
+try { Object.assign(S, JSON.parse(localStorage.getItem('ribosome-proto') || '{}')); } catch {}
+if (S.secondary === S.target) S.secondary = S.target === 'en' ? 'ru' : 'en'; // второй язык не может совпадать с целевым
+const save = () => { try { localStorage.setItem('ribosome-proto', JSON.stringify(S)); } catch {} };
+
+const rb = $('#rb'), trig = $('#rb-trigger'), popup = $('#rb-popup'), tpl = $('#rb-bubble-tpl');
+const dark = matchMedia('(prefers-color-scheme: dark)');
+
+function fillSelect(sel, codes) { sel.innerHTML = codes.map(c => `<option value="${c}">${LANGS[c]}</option>`).join(''); }
+fillSelect($('#tr-from'), ['auto', 'en', 'ru', 'de', 'es', 'fr', 'zh', 'ja']);
+fillSelect($('#tr-to'), ['ru', 'en', 'de', 'es', 'fr', 'zh', 'ja']);
+fillSelect($('[data-set=target]'), ['ru', 'en', 'de', 'es', 'fr', 'zh', 'ja']);
+fillSelect($('[data-set=secondary]'), ['en', 'ru', 'de', 'es', 'fr', 'zh', 'ja']);
+fillSelect($('[data-set=source]'), ['auto', 'en', 'ru', 'de', 'es', 'fr', 'zh', 'ja']);
+
+function apply() {
+  rb.dataset.theme = S.theme === 'auto' ? (dark.matches ? 'dark' : 'light') : S.theme;
+  $$('[data-set]').forEach(el => { el.value = S[el.dataset.set]; });
+  $$('#set-mode .rb-row').forEach(el => el.classList.toggle('is-sel', el.dataset.mode === S.mode));
+  $$('#set-theme button').forEach(el => el.classList.toggle('is-on', el.dataset.theme === S.theme));
+}
+dark.addEventListener('change', apply);
+$$('[data-set]').forEach(el => el.addEventListener('change', () => {
+  const k = el.dataset.set, prev = S[k]; S[k] = el.value;
+  // «переводить на» и «второй язык» не могут совпадать — меняем местами
+  if (k === 'target' && S.secondary === S.target) S.secondary = prev;
+  if (k === 'secondary' && S.secondary === S.target) S.target = prev;
+  if (k === 'target' || k === 'secondary') { $('#tr-to').value = S.target; runTr(); }
+  save(); apply();
+}));
+$('#set-mode').addEventListener('click', e => { const r = e.target.closest('[data-mode]'); if (!r) return; S.mode = r.dataset.mode; save(); apply(); });
+$('#set-theme').addEventListener('click', e => { const b = e.target.closest('button[data-theme]'); if (!b) return; S.theme = b.dataset.theme; save(); apply(); });
+
+/* ---------- Имитация background: кэш, лимитер, backoff, ошибки ---------- */
+const SK = '<div class="rb-sk"><i></i><i></i></div>';
+const STATES = ['auto', 'cached', 'queued', '429', 'offline', '5xx', 'truncated', 'nothing', 'ctx', 'copyfail', 'pinned'];
+let demoState = 'auto';
+
+// cb(state, data) возвращает false, если запрос уже отменён
+function simulate(r, st, cb) {
+  const later = (ms, fn) => setTimeout(fn, ms);
+  switch (st) {
+    case 'cached': cb('ok', r); break;
+    case 'nothing': cb('nothing'); break;
+    case 'ctx': cb('ctx'); break;
+    case 'queued': cb('queued'); later(1400, () => cb('loading') && later(500, () => cb('ok', r))); break;
+    case '429': {
+      cb('loading');
+      later(450, () => {
+        let w = 8;
+        if (!cb('429', { wait: w })) return;
+        const iv = setInterval(() => {
+          w--;
+          if (w > 0) { if (!cb('429', { wait: w })) clearInterval(iv); return; }
+          clearInterval(iv);
+          cb('loading') && later(450, () => cb('ok', r));
+        }, 1000);
+      });
+      break;
+    }
+    case 'offline': cb('loading'); later(450, () => cb('offline')); break;
+    case '5xx': cb('loading'); later(450, () => cb('5xx')); break;
+    case 'truncated': cb('loading'); later(450, () => cb('ok', { ...r, truncated: true })); break;
+    default: cb('loading'); later(450, () => cb('ok', r));
+  }
+}
+
+const showNote = (v, t) => { v.note.textContent = t; v.note.hidden = false; };
+// общий рендер состояния для окна и для popup
+function render(v, st, data) {
+  v.note.hidden = true; v.retry.hidden = true; v.copy.hidden = true; v.retry.textContent = 'Повторить';
+  v.bt.classList.remove('is-empty');
+  const note = t => { v.note.textContent = t; v.note.hidden = false; };
+  switch (st) {
+    case 'loading': v.bt.innerHTML = SK; break;
+    case 'queued': v.bt.innerHTML = SK; note('Много запросов подряд — в очереди…'); break;
+    case 'ok':
+      v.bt.textContent = data.text || fallback(data);
+      v.bt.classList.toggle('is-empty', !data.text);
+      v.copy.hidden = !data.text;
+      if (data.truncated) note('Переведены первые 5000 символов — выделение длиннее.');
+      break;
+    case 'nothing': v.bt.textContent = 'Нечего переводить.'; v.bt.classList.add('is-empty'); note('В выделении только цифры и знаки.'); break;
+    case '429': v.bt.textContent = 'Google ограничил запросы.'; note(`Пауза ${data.wait} с, потом повторим сами.`); break;
+    case 'offline': v.bt.textContent = 'Нет соединения.'; note('Проверь интернет и повтори.'); v.retry.hidden = false; break;
+    case '5xx': v.bt.textContent = 'Google Translate не отвечает.'; note('Ошибка 503. Повтори через минуту.'); v.retry.hidden = false; break;
+    case 'ctx': v.bt.textContent = 'Расширение обновилось.'; note('Обнови страницу, чтобы перевод снова заработал.'); v.retry.hidden = false; v.retry.textContent = 'Обновить страницу'; break;
+  }
+  v.bt._upd?.();
+}
+
+/* ---------- Копирование ---------- */
+const ICON_DONE = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 8.5 3.2 3L13 4.5"/></svg>';
+const ICON_FAIL = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>';
+function flash(btn, label, cls, icon) {
+  btn._orig ||= btn.innerHTML;
+  btn.classList.remove('is-done', 'is-fail'); btn.classList.add(cls);
+  btn.innerHTML = icon + `<span class="lbl">${label}</span>`;
+  clearTimeout(btn._t);
+  btn._t = setTimeout(() => { btn.classList.remove(cls); btn.innerHTML = btn._orig; }, 1400);
+}
+async function copy(text, btn) {
+  if (demoState === 'copyfail') { flash(btn, 'Не скопировалось', 'is-fail', ICON_FAIL); return; }
+  let ok = true;
+  try { await navigator.clipboard.writeText(text); }
+  catch { const ta = document.createElement('textarea'); ta.value = text; document.body.append(ta); ta.select(); ok = document.execCommand('copy'); ta.remove(); }
+  flash(btn, ok ? 'Скопировано' : 'Не скопировалось', ok ? 'is-done' : 'is-fail', ok ? ICON_DONE : ICON_FAIL);
+}
+
+/* ---------- Позиционирование ---------- */
+const clamp = (v, a, b) => Math.min(Math.max(v, a), b);
+// side: 'below' | 'above' — выбирается при открытии и дальше не меняется, чтобы окно не прыгало при прокрутке
+// minH — высота, по которой выбирать сторону (окно при открытии показывает скелет, а вырастет до ~330)
+function place(el, rect, gap = 8, side, minH = 0) {
+  const w = el.offsetWidth, h = el.offsetHeight, vw = innerWidth, vh = innerHeight, hs = Math.max(h, minH);
+  const left = clamp(rect.left + rect.width / 2 - w / 2, 8, vw - w - 8);
+  if (!side) side = rect.bottom + gap + hs > vh - 8 && rect.top - gap - hs > 8 ? 'above' : 'below';
+  const top = side === 'below' ? rect.bottom + gap : rect.top - gap - h;
+  el.style.left = left + 'px'; el.style.top = top + 'px'; el.style.transformOrigin = side === 'below' ? 'top center' : 'bottom center';
+  return side;
+}
+function show(el) { clearTimeout(el._h); el.classList.add('is-on'); void el.offsetWidth; el.classList.add('is-in'); }
+
+// свой ползунок прокрутки для контейнера sc; рисуется в его positioned-родителе (popup / окно перевода)
+function overlayScrollbar(sc) {
+  const th = document.createElement('div'); th.className = 'rb-thumb'; sc.parentElement.append(th);
+  const upd = () => {
+    const vis = sc.scrollHeight > sc.clientHeight + 1; th.hidden = !vis; if (!vis) return;
+    const r = sc.getBoundingClientRect(), p = sc.parentElement.getBoundingClientRect();
+    const h = Math.max(24, sc.clientHeight * sc.clientHeight / sc.scrollHeight);
+    const y = sc.scrollTop / (sc.scrollHeight - sc.clientHeight) * (sc.clientHeight - h);
+    th.style.top = r.top - p.top + y + 'px'; th.style.height = h + 'px';
+  };
+  sc.addEventListener('scroll', () => { upd(); th.classList.add('is-scrolling'); clearTimeout(th._t); th._t = setTimeout(() => th.classList.remove('is-scrolling'), 600); }, { passive: true });
+  new ResizeObserver(upd).observe(sc);
+  sc._upd = upd; upd();
+}
+function hide(el) { if (!el.classList.contains('is-on')) return; el.classList.remove('is-in'); clearTimeout(el._h); el._h = setTimeout(() => el.classList.remove('is-on'), 170); }
+
+/* ---------- Окна перевода: активное + закреплённые ---------- */
+let cur = null, active = null, instantT = 0;
+
+function newBubble() {
+  const el = tpl.content.firstElementChild.cloneNode(true);
+  rb.append(el);
+  const v = el._v = { bt: $('.rb-bt', el), note: $('.rb-note', el), copy: $('.rb-copy', el), retry: $('.rb-retry', el), lang: $('.rb-lang', el) };
+  overlayScrollbar(v.bt);
+  $('.rb-x', el).addEventListener('click', () => closeBubble(el));
+  $('.rb-pin', el).addEventListener('click', () => togglePin(el));
+  $('.rb-loc', el).addEventListener('click', () => locate(el));
+  $('.rb-src', el).addEventListener('click', () => locate(el));
+  v.copy.addEventListener('click', () => el._text && copy(el._text, v.copy));
+  v.retry.addEventListener('click', () => el._st === 'ctx' ? location.reload() : request(el, el._req, 'auto'));
+  // перетаскивание закреплённого окна за шапку
+  const bh = $('.rb-bh', el);
+  bh.addEventListener('pointerdown', e => {
+    if (!el.classList.contains('is-pinned') || e.target.closest('button')) return;
+    rb.append(el); // перетаскиваемое окно — поверх остальных закреплённых
+    const sx = e.clientX - el.offsetLeft, sy = e.clientY - el.offsetTop;
+    const mv = ev => { el.style.left = clamp(ev.clientX - sx, 8, innerWidth - el.offsetWidth - 8) + 'px'; el.style.top = clamp(ev.clientY - sy, 8, innerHeight - el.offsetHeight - 8) + 'px'; };
+    const up = () => { bh.removeEventListener('pointermove', mv); ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => bh.removeEventListener(t, up)); el.classList.remove('is-drag'); };
+    bh.setPointerCapture(e.pointerId); // тач и выход курсора за окно — события всё равно придут сюда
+    el.classList.add('is-drag'); bh.addEventListener('pointermove', mv); ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => bh.addEventListener(t, up)); e.preventDefault();
+  });
+  return el;
+}
+function closeBubble(el) {
+  if (active === el) active = null;
+  el._tok = (el._tok || 0) + 1;
+  el.classList.remove('is-in');
+  setTimeout(() => el.remove(), 170);
+}
+function closeActive() { if (active) closeBubble(active); hide(trig); clearTimeout(instantT); }
+function togglePin(el) {
+  const on = el.classList.toggle('is-pinned');
+  $('.rb-pin', el).setAttribute('aria-label', on ? 'Открепить' : 'Закрепить');
+  const src = $('.rb-src', el); src.hidden = !on; src.textContent = el._req ? el._req.text : '';
+  if (on) { if (active === el) active = null; }
+  else {
+    if (active && active !== el) closeBubble(active); active = el;
+    if (el._range && !el._range.collapsed) { el._anchor = el._range.getBoundingClientRect(); el._side = place(el, el._anchor, 10); } // открепили — сразу к тексту
+  }
+}
+// скролл к исходному тексту и подсветка наложением на 1,4 с; DOM страницы не трогаем
+// прямоугольники только текстовых узлов: Range.getClientRects() для целиком выделенного абзаца даёт ещё и рамку блока — двойной слой
+function rangeRects(range) {
+  const out = [], r = document.createRange(), root = range.commonAncestorContainer, nodes = [];
+  if (root.nodeType === 3) nodes.push(root);
+  else { const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) if (range.intersectsNode(n)) nodes.push(n); }
+  for (const t of nodes) {
+    r.selectNodeContents(t);
+    if (t === range.startContainer) r.setStart(t, range.startOffset);
+    if (t === range.endContainer) r.setEnd(t, range.endOffset);
+    for (const x of r.getClientRects()) if (x.width && x.height) out.push(x);
+  }
+  return out;
+}
+let flashCleanup = null;
+function flashRange(range, hold) {
+  flashCleanup?.();
+  const rects = rangeRects(range); if (!rects.length) return;
+  const els = rects.map(() => { const f = document.createElement('div'); f.className = 'rb-flash' + (hold ? ' is-hold' : ''); rb.append(f); return f; });
+  // подсветка едет вместе с текстом: пересчёт при любой прокрутке (окна или вложенного контейнера) и ресайзе
+  const sync = () => {
+    const rs = rangeRects(range);
+    els.forEach((f, i) => { const r = rs[i]; if (!r) { f.style.display = 'none'; return; } f.style.cssText = `left:${r.left - 2}px;top:${r.top - 1}px;width:${r.width + 4}px;height:${r.height + 2}px`; });
+  };
+  sync();
+  document.addEventListener('scroll', sync, { capture: true, passive: true });
+  addEventListener('resize', sync);
+  flashCleanup = () => { document.removeEventListener('scroll', sync, true); removeEventListener('resize', sync); els.forEach(f => f.remove()); flashCleanup = null; };
+  if (!hold) els[0]?.addEventListener('animationend', () => flashCleanup?.());
+}
+const inView = r => r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth;
+// закреплённое окно легло на подсвеченный текст — отодвигаем под текст, нет места — над ним
+function nudge(el, r) {
+  // целевое положение из style, не getBoundingClientRect: окно может быть в середине transition
+  const b = { left: parseFloat(el.style.left) || 0, top: parseFloat(el.style.top) || 0, height: el.offsetHeight };
+  b.right = b.left + el.offsetWidth; b.bottom = b.top + b.height;
+  if (b.right < r.left || b.left > r.right || b.bottom < r.top || b.top > r.bottom) return;
+  let top = r.bottom + 12;
+  if (top + b.height > innerHeight - 8) top = r.top - 12 - b.height;
+  el.style.top = Math.max(8, top) + 'px';
+}
+let locateTok = 0, locating = null, locateOff = null;
+function locate(el, hold) {
+  const range = el._range, v = el._v;
+  if (!range || range.collapsed || !document.contains(range.commonAncestorContainer)) return showNote(v, 'Текст на странице уже не найден — страница изменилась.');
+  if (!rangeRects(range).length) return showNote(v, 'Текст на странице сейчас скрыт.');
+  if (locating === el) return; // повторный клик во время перехода
+  locateOff?.(); const my = ++locateTok; locating = el;
+  // отодвигаем все закреплённые окна, которые легли на текст, не только это
+  const done = () => { if (my !== locateTok) return; locating = null; const r = range.getBoundingClientRect(); $$('.rb-bubble.is-pinned').forEach(b => nudge(b, r)); flashRange(range, hold); };
+  if (inView(range.getBoundingClientRect())) return done();
+  // 1) мгновенный scrollIntoView прокручивает все вложенные контейнеры и окно (smooth на вложенных в Chromium не работает)
+  const x0 = scrollX, y0 = scrollY;
+  const n = range.startContainer, startEl = n.nodeType === 1 ? n : n.parentElement;
+  startEl.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
+  // 2) доводим сам фрагмент: по центру, а если он выше 80% экрана — началом к верху
+  const r0 = range.getBoundingClientRect();
+  const dy = r0.height > innerHeight * 0.8 ? r0.top - 80 : r0.top + r0.height / 2 - innerHeight / 2;
+  scrollBy({ top: dy, left: r0.left + r0.width / 2 - innerWidth / 2, behavior: 'instant' });
+  const x1 = scrollX, y1 = scrollY;
+  if (hold || matchMedia('(prefers-reduced-motion: reduce)').matches || (x1 === x0 && y1 === y0)) return done();
+  // 3) окно возвращаем назад и едем к цели плавно — всё в одном кадре, скачка не видно
+  scrollTo({ left: x0, top: y0, behavior: 'instant' });
+  scrollTo({ left: x1, top: y1, behavior: 'smooth' });
+  // пользователь вмешался (колесо, клавиши, тач вне нашего UI) — переход отменяем, подсветку не рисуем
+  const EV = ['wheel', 'keydown', 'touchstart', 'pointerdown'];
+  const off = () => { EV.forEach(t => removeEventListener(t, stop, true)); if (locateOff === off) locateOff = null; };
+  const stop = e => { if (e.target.closest?.('#rb')) return; if (my === locateTok) { locateTok++; locating = null; } off(); };
+  EV.forEach(t => addEventListener(t, stop, { capture: true, passive: true })); locateOff = off;
+  // «приехали» = позиция не меняется несколько кадров подряд (scrollend стреляет рано и с вложенных контейнеров)
+  let last = '', still = 0; const t0 = performance.now();
+  const tick = () => {
+    if (my !== locateTok) return;
+    const cur = scrollX + ',' + scrollY; still = cur === last ? still + 1 : 0; last = cur;
+    const arrived = Math.abs(scrollX - x1) <= 1 && Math.abs(scrollY - y1) <= 1;
+    if ((still >= 3 && arrived) || still >= 12 || performance.now() - t0 > 2500) {
+      if (!arrived) scrollTo({ left: x1, top: y1, behavior: 'instant' }); // Chromium бросил smooth — доезжаем сами
+      off(); return done();
+    }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+function reveal(el) {
+  if (el.classList.contains('is-on')) { if (!el.classList.contains('is-pinned')) place(el, el._anchor, 10, el._side); return; }
+  el.classList.add('is-on'); el._side = place(el, el._anchor, 10, undefined, 330); void el.offsetWidth; el.classList.add('is-in');
+}
+// обычное окно и триггер привязаны к тексту: при прокрутке и ресайзе едут вместе с ним
+function syncAnchored() {
+  if (active && active._range && !active._range.collapsed) { active._anchor = active._range.getBoundingClientRect(); place(active, active._anchor, 10, active._side); }
+  if (trig.classList.contains('is-on') && trig._range) {
+    const rs = trig._range.getClientRects(), r = (trig._focus && trig._focus.getClientRects()[0]) || rs[rs.length - 1];
+    if (r) placeTrigger(r, trig._side);
+  }
+}
+// при ресайзе закреплённые окна не должны уйти за край — иначе их не закрыть
+function onResize() {
+  syncAnchored();
+  $$('.rb-bubble.is-pinned').forEach(b => { b.style.left = clamp(parseFloat(b.style.left) || 0, 8, innerWidth - b.offsetWidth - 8) + 'px'; b.style.top = clamp(parseFloat(b.style.top) || 0, 8, innerHeight - b.offsetHeight - 8) + 'px'; });
+}
+function request(el, req, st) {
+  el._req = req;
+  const r = translate(req.text, req.from, req.to);
+  el._v.lang.textContent = `${r.det} → ${r.to}`.toUpperCase();
+  const tok = el._tok = (el._tok || 0) + 1;
+  simulate(r, st, (state, data) => {
+    if (tok !== el._tok) return false;
+    el._st = state; el._text = (state === 'ok' && data.text) || '';
+    render(el._v, state, data); reveal(el);
+    return true;
+  });
+}
+function openBubbleFor(c) {
+  hide(trig);
+  const el = active || (active = newBubble());
+  el._range = c.range;
+  el._anchor = c.range && !c.range.collapsed ? c.range.getBoundingClientRect() : c.box; // по текущему положению текста, не по моменту выделения
+  request(el, { text: c.text, from: S.source }, demoState);
+  return el;
+}
+function placeTrigger(rect, side) {
+  const w = trig.offsetWidth, h = trig.offsetHeight;
+  if (!side) side = rect.bottom + 6 + h > innerHeight - 8 ? 'above' : 'below';
+  trig.style.left = clamp(rect.right + 6, 8, innerWidth - w - 8) + 'px'; trig.style.top = (side === 'below' ? rect.bottom + 6 : rect.top - h - 6) + 'px';
+  return side;
+}
+function showTrigger(rect) {
+  trig._range = cur && cur.range; trig._focus = cur && cur.focus;
+  trig.style.visibility = 'hidden'; trig.classList.add('is-on');
+  trig._side = placeTrigger(rect); trig.style.visibility = '';
+  show(trig);
+}
+
+let downInRb = false;
+// клик по системной полосе прокрутки — не «клик в пустое место»
+const onScrollbar = e => {
+  const t = e.target, de = document.documentElement;
+  if (t === de || t === document.body) return e.clientX >= de.clientWidth || e.clientY >= de.clientHeight;
+  return t.nodeType === 1 && t.clientWidth > 0 && (e.offsetX >= t.clientWidth || e.offsetY >= t.clientHeight);
+};
+const sameRange = (a, b) => !!b && !b.collapsed && a.compareBoundaryPoints(Range.START_TO_START, b) === 0 && a.compareBoundaryPoints(Range.END_TO_END, b) === 0;
+// точка, где отпустили мышь (focus выделения) — для выделения снизу вверх иконка должна быть у курсора, а не у конца текста
+const focusRange = sel => { try { const r = document.createRange(); r.setStart(sel.focusNode, sel.focusOffset); r.collapse(true); return r; } catch { return null; } };
+
+document.addEventListener('mouseup', e => {
+  // решает, где нажали (downInRb), а не где отпустили: выделение можно закончить над закреплённым окном
+  if (e.button !== 0 || downInRb || e.target.closest('.proto, .chrome')) return;
+  const clicks = e.detail;
+  setTimeout(() => {
+    const sel = getSelection(); const text = sel && sel.toString().trim();
+    if (!text || sel.rangeCount === 0) { hide(trig); return; }
+    const range = sel.getRangeAt(0);
+    if (range.intersectsNode(rb)) return;                   // выделение зацепило наш UI
+    if (active && sameRange(range, active._range)) return;  // то же выделение (клик по скроллбару и т.п.) — не переоткрывать
+    const rects = range.getClientRects(), focus = focusRange(sel), ae = document.activeElement;
+    if (!rects.length && ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName)) { // выделение в поле ввода: Range схлопнут, якорь — само поле
+      const fr = ae.getBoundingClientRect();
+      cur = { text, range: null, focus: null, box: fr, last: fr };
+      if (S.mode === 'icon') showTrigger(fr); else { hide(trig); clearTimeout(instantT); instantT = setTimeout(() => openBubbleFor(cur), 300); }
+      return;
+    }
+    cur = { text, range: range.cloneRange(), focus, box: range.getBoundingClientRect(), last: (focus && focus.getClientRects()[0]) || rects[rects.length - 1] || range.getBoundingClientRect() };
+    if (S.mode === 'icon') showTrigger(cur.last);
+    else { hide(trig); clearTimeout(instantT); instantT = setTimeout(() => openBubbleFor(cur), clicks >= 2 ? 500 : 300); } // после двойного клика ждём интервал мультиклика, иначе тройной даст два запроса
+  }, 0);
+});
+document.addEventListener('mousedown', e => {
+  downInRb = !!e.target.closest('#rb');
+  if (e.button !== 0 || downInRb || onScrollbar(e)) return;
+  closeActive();
+  if (!e.target.closest('#ext-btn')) hidePopup();
+});
+document.addEventListener('scroll', syncAnchored, { capture: true, passive: true });
+addEventListener('resize', onResize);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !e.target.closest?.('select')) { closeActive(); hidePopup(); } }); // Esc в открытом списке закрывает только список
+trig.addEventListener('click', () => cur && openBubbleFor(cur));
+
+/* ---------- Popup расширения ---------- */
+const extBtn = $('#ext-btn');
+function showPopup() { extBtn.classList.add('is-on'); show(popup); }
+function hidePopup() { extBtn.classList.remove('is-on'); hide(popup); }
+extBtn.addEventListener('click', () => popup.classList.contains('is-on') ? hidePopup() : showPopup());
+$$('.rb-tab').forEach(overlayScrollbar);
+$('#rb-tabs').addEventListener('click', e => {
+  const b = e.target.closest('[data-tab]'); if (!b) return;
+  $$('#rb-tabs button').forEach(x => x.classList.toggle('is-on', x === b));
+  $$('.rb-tab').forEach(x => x.classList.toggle('is-on', x.dataset.tab === b.dataset.tab));
+});
+
+const trIn = $('#tr-in'), trFrom = $('#tr-from'), trTo = $('#tr-to'), trLab = $('#tr-lab'), trCnt = $('#tr-cnt');
+const trView = { bt: $('#tr-out'), note: $('#tr-note'), copy: $('#tr-copy'), retry: $('#tr-retry') };
+trTo.value = S.target;
+let trT = 0, trTok = 0, trText = '', trSt = '', lastDet = 'en', lastTo = 'ru';
+function runTr(st = demoState) {
+  const text = trIn.value.trim();
+  trLab.textContent = LANGS[trTo.value];
+  if (!text) { trTok++; trView.bt.textContent = 'Перевод появится здесь'; trView.bt.classList.add('is-empty'); trView.note.hidden = trView.copy.hidden = trView.retry.hidden = true; return; }
+  const r = translate(text, trFrom.value, trTo.value);
+  lastDet = r.det; lastTo = r.to; trLab.textContent = LANGS[r.to];
+  const tok = ++trTok;
+  simulate(r, st, (state, data) => {
+    if (tok !== trTok) return false;
+    trSt = state; trText = (state === 'ok' && data.text) || '';
+    render(trView, state, data);
+    return true;
+  });
+}
+const updCnt = () => { const n = trIn.value.length; trCnt.textContent = `${n} / 5000`; trCnt.classList.toggle('is-over', n > 5000); };
+trIn.addEventListener('input', () => { updCnt(); clearTimeout(trT); trT = setTimeout(runTr, 400); });
+trFrom.addEventListener('change', () => runTr());
+trTo.addEventListener('change', () => runTr());
+$('#tr-swap').addEventListener('click', () => {
+  // меняем местами фактическую пару: язык результата → источник, определённый язык → цель (а не значения пилюль — при «Авто» и втором языке они врут)
+  const from = trText ? lastTo : trFrom.value === 'auto' ? lastDet : trFrom.value;
+  const to = trText ? lastDet : trTo.value;
+  trFrom.value = from; trTo.value = to;
+  if (trText) trIn.value = trText;
+  updCnt(); runTr();
+});
+overlayScrollbar(trView.bt); overlayScrollbar(trIn);
+trView.copy.addEventListener('click', e => trText && copy(trText, e.currentTarget));
+trView.retry.addEventListener('click', () => trSt === 'ctx' ? location.reload() : runTr('auto'));
+
+/* ---------- Панель прототипа: показать состояние сразу ---------- */
+function ensureCur(sel = '.page p:not(.kicker)') {
+  if (cur) return cur;
+  const p = $(sel), range = document.createRange();
+  range.selectNodeContents(p); getSelection().removeAllRanges(); getSelection().addRange(range);
+  const rects = range.getClientRects();
+  return cur = { text: p.textContent, range, box: range.getBoundingClientRect(), last: rects[rects.length - 1] };
+}
+function demoNow() {
+  const el = openBubbleFor(ensureCur());
+  if (demoState === 'pinned' && !el.classList.contains('is-pinned')) togglePin(el);
+  if (popup.classList.contains('is-on') && trIn.value.trim()) runTr();
+}
+$('#proto-state').addEventListener('change', e => { demoState = e.target.value; demoNow(); });
+
+apply();
+
+/* #demo-light-set-429-pin — состояние для скриншота: тема, icon = только триггер, set = вкладка настроек, имя состояния, pin */
+if (location.hash.startsWith('#demo')) {
+  const f = location.hash.slice(6).split('-').filter(Boolean);
+  if (f.includes('dark')) S.theme = 'dark'; if (f.includes('light')) S.theme = 'light'; apply();
+  const st = f.find(x => STATES.includes(x)); if (st) { demoState = st; $('#proto-state').value = st; }
+  ensureCur(f.includes('strip') ? '.strip .card:last-child' : f.includes('note') ? '.margin-note' : undefined);
+  if (f.includes('icon')) showTrigger(cur.last);
+  else {
+    const el = openBubbleFor(cur);
+    if (f.includes('pin')) togglePin(el);
+    if (f.includes('flash')) {
+      el.style.left = f.includes('over') ? '300px' : '40px'; el.style.top = f.includes('over') ? '300px' : '520px';
+      scrollTo(0, 0); $('.strip').scrollLeft = 0; locate(el, true);
+      // для headless-проверки: итоговое положение в title
+      setTimeout(() => { document.title = JSON.stringify({ x: scrollX, y: scrollY, strip: $('.strip').scrollLeft, sel: range_(el), bubbleTop: el.style.top, flash: $$('.rb-flash').map(x => x.style.cssText) }); }, 1500);
+      function range_(b) { const r = b._range.getBoundingClientRect(); return { l: Math.round(r.left), t: Math.round(r.top), r: Math.round(r.right), b: Math.round(r.bottom) }; }
+    }
+  }
+  if (!f.includes('flash')) showPopup();
+  if (f.includes('set')) $('#rb-tabs [data-tab=set]').click();
+  else { trIn.value = 'Every living cell contains thousands of ribosomes.'; trIn.dispatchEvent(new Event('input')); }
+}
+})();
+</script>
+</body>
+</html>
