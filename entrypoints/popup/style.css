@@ -1,13 +1,71 @@
-html, body { margin: 0; }
+html, body { margin: 0; overflow: hidden; }
+/* окно popup непрозрачное — стекло сводим к его цвету на белом */
 body { width: 360px; background: #f9f9fa; }
 body[data-theme=dark] { background: #232327; }
 
-.rb-ph { display: flex; align-items: center; gap: 10px; padding: 12px 14px 10px; }
+.rb-popup { position: relative; display: flex; flex-direction: column; max-height: 600px; }
+.rb-ph { display: flex; align-items: center; gap: 10px; padding: 12px 14px 10px; flex-shrink: 0; }
 .rb-ph .logo { width: 22px; height: 22px; border-radius: 6px; }
 .rb-ph .name { font-weight: 600; font-size: 14px; letter-spacing: -.005em; }
 
-.rb-seg { display: flex; padding: 2px; background: var(--fill); border-radius: 9px; margin: 0 14px 12px; }
+.rb-seg { display: flex; padding: 2px; background: var(--fill); border-radius: 9px; margin: 0 14px 12px; flex-shrink: 0; }
 .rb-seg button { flex: 1; height: 26px; border: 0; border-radius: 7px; background: transparent; color: var(--t1); font: 500 13px/1 var(--ui-font); letter-spacing: .01em; transition: background var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out); }
 .rb-seg button.is-on { background: var(--seg-on); box-shadow: 0 1px 3px rgba(0, 0, 0, .12), 0 0 0 .5px rgba(0, 0, 0, .04); }
-.rb-seg.sm { width: 196px; padding: 2px; }
+.rb-seg.sm { margin: 0; width: 196px; }
 .rb-seg.sm button { height: 22px; font-size: 12px; }
+
+.rb-tab { display: none; padding: 0 14px 12px; overflow: auto; min-height: 0; }
+.rb-tab.is-on { display: block; }
+i[data-icon] { display: contents; }
+
+/* вкладка «Перевод» */
+.rb-langs { display: grid; grid-template-columns: 1fr 32px 1fr; gap: 8px; align-items: center; margin-bottom: 10px; }
+.rb-pill { position: relative; min-width: 0; }
+.rb-pill select { display: flex; align-items: center; justify-content: center; width: 100%; height: 34px; padding: 0 26px 0 14px; border: 0; border-radius: 17px; background: var(--fill); color: var(--t1); font: 500 14px var(--ui-font); cursor: pointer; text-align: center; outline: 0; }
+.rb-pill svg { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--t2); width: 11px; height: 11px; }
+.rb-swap { width: 32px; height: 32px; padding: 0; border: 0; border-radius: 16px; background: var(--fill); color: var(--t1); display: grid; place-items: center; transition: background var(--dur-fast) var(--ease-out), transform 90ms var(--ease-out); }
+.rb-swap:hover { background: var(--fill2); }
+.rb-swap:active { transform: scale(.95); }
+.rb-swap svg { width: 15px; height: 15px; }
+.rb-tawrap { position: relative; }
+.rb-ta { display: block; width: 100%; min-height: 96px; max-height: 180px; field-sizing: content; resize: none; border: 0; border-radius: 10px; padding: 10px 12px; background: var(--group); color: var(--t1); font: 400 15px/1.45 var(--ui-font); outline: 0; box-shadow: inset 0 0 0 1px var(--sep); transition: box-shadow var(--dur-fast) var(--ease-out); }
+.rb-ta::placeholder { color: var(--t3); }
+.rb-ta:focus { box-shadow: inset 0 0 0 1px var(--accent), 0 0 0 3px var(--ring); }
+.rb-cnt { text-align: right; font-size: 11px; color: var(--t3); margin: 4px 2px 0; letter-spacing: .01em; font-variant-numeric: tabular-nums; }
+.rb-cnt.is-over { color: var(--red); }
+.rb-res { position: relative; margin-top: 6px; border-radius: 10px; background: var(--group); box-shadow: inset 0 0 0 1px var(--sep); padding: 10px 12px; min-height: 110px; display: flex; flex-direction: column; }
+.rb-res .lab { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+.rb-res .rb-bt { max-height: 160px; }
+.rb-res .rb-note { padding: 6px 0 0; }
+.rb-res .bar { display: flex; justify-content: flex-end; gap: 6px; margin-top: auto; padding-top: 8px; }
+
+/* вкладка «Настройки» — сгруппированные списки как в iOS */
+.rb-set { display: grid; gap: 12px; }
+.rb-grp h4 { margin: 0 0 5px 12px; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--t2); }
+.rb-grp .box { background: var(--group); border-radius: 10px; }
+.rb-grp .box + .box { margin-top: 10px; }
+.rb-row { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 38px; padding: 0 12px; border: 0; background: transparent; color: var(--t1); font: 400 14px var(--ui-font); text-align: left; }
+.rb-row + .rb-row::before { content: ""; position: absolute; left: 12px; right: 0; top: 0; height: 1px; background: var(--sep); }
+.rb-row .val { position: relative; display: flex; align-items: center; color: var(--t2); min-width: 0; }
+.rb-row .val select { display: flex; align-items: center; justify-content: flex-end; max-width: 170px; border: 0; background: transparent; color: var(--t2); font: 400 14px var(--ui-font); padding: 6px 18px 6px 6px; cursor: pointer; text-align: right; outline: 0; border-radius: 6px; }
+.rb-row .val svg { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); width: 11px; height: 11px; pointer-events: none; color: var(--t3); }
+.rb-row.is-pick { cursor: pointer; }
+.rb-row.is-pick:hover { background: rgba(120, 120, 128, .06); }
+.rb-row.is-pick:first-child { border-radius: 10px 10px 0 0; }
+.rb-row.is-pick:last-child { border-radius: 0 0 10px 10px; }
+.rb-row i.ck { display: block; flex: none; width: 16px; height: 16px; color: var(--accent); opacity: 0; transition: opacity var(--dur-fast) var(--ease-out); }
+.rb-row .ck svg { width: 100%; height: 100%; }
+.rb-row[aria-checked=true] .ck { opacity: 1; }
+.rb-grp .note { margin: 5px 12px 0; font-size: 12px; line-height: 1.35; color: var(--t2); letter-spacing: .01em; }
+
+.rb-switch { appearance: none; flex: none; position: relative; width: 38px; height: 22px; margin: 0; border-radius: 11px; background: var(--fill2); cursor: pointer; transition: background 160ms var(--ease-out); }
+.rb-switch::before { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .25); transition: transform 160ms var(--ease-out); }
+.rb-switch:checked { background: var(--accent); }
+.rb-switch:checked::before { transform: translateX(16px); }
+.rb-switch:focus-visible { outline: 0; box-shadow: 0 0 0 3px var(--ring); }
+
+.rb-pf { display: flex; justify-content: space-between; padding: 2px 14px 10px; font-size: 11px; color: var(--t3); letter-spacing: .01em; flex-shrink: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rb-switch, .rb-switch::before { transition: none; }
+}
