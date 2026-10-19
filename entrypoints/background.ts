@@ -12,7 +12,7 @@ export default defineBackground(() => {
 
   const translator = createTranslator({
     provider: async () => providers[(await settings).provider] ?? providers.google,
-    secondary: async () => (await settings).secondary,
+    langs: () => settings,
     cache: sessionCache(),
   });
 

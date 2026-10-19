@@ -21,7 +21,7 @@ const fake = (impl?: (text: string, from: string, to: string) => { text: string;
 
 // лимитер нужен только в своём тесте, остальным он мешает фейковыми таймерами
 const setup = (p: Provider, secondary = 'en', acquire: Acquire = async () => {}) =>
-  createTranslator({ provider: () => p, secondary: () => secondary, cache: memCache(), acquire });
+  createTranslator({ provider: () => p, langs: () => ({ target: 'ru', secondary }), cache: memCache(), acquire });
 const never = new AbortController().signal;
 
 beforeEach(() => vi.useFakeTimers());
@@ -82,6 +82,14 @@ test('второй язык: текст уже на языке перевода'
   const r = await t.translate({ text: 'Рибосомы древние.', from: 'auto', to: 'ru' }, never, () => {});
   expect(r).toMatchObject({ ok: true, to: 'en', detected: 'ru', text: 'en:Рибосомы древние.' });
   expect(calls.map((c) => [c.from, c.to])).toEqual([['auto', 'ru'], ['ru', 'en']]);
+});
+
+test('второй язык совпал с запрошенным — переводим на «Переводить на», а не эхом', async () => {
+  const { p, calls } = fake((text, _from, to) => ({ text: `${to}:${text}`, detected: 'en' }));
+  const t = setup(p, 'en');
+  const r = await t.translate({ text: 'Ribosomes are ancient.', from: 'auto', to: 'en' }, never, () => {});
+  expect(r).toMatchObject({ ok: true, to: 'ru', detected: 'en', text: 'ru:Ribosomes are ancient.' });
+  expect(calls.map((c) => [c.from, c.to])).toEqual([['auto', 'en'], ['en', 'ru']]);
 });
 
 test('без букв — nothing без запроса; длинный текст обрезается', async () => {

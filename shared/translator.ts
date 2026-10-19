@@ -83,12 +83,15 @@ type Flight = {
 
 type Deps = {
   provider: () => Provider | Promise<Provider>;
-  secondary: () => string | Promise<string>;
+  /** Языки из настроек для правила второго языка. */
+  langs: () => Langs | Promise<Langs>;
   cache: Cache;
   acquire?: Acquire;
 };
 
-export function createTranslator({ provider, secondary, cache, acquire = createLimiter() }: Deps) {
+type Langs = { target: string; secondary: string };
+
+export function createTranslator({ provider, langs, cache, acquire = createLimiter() }: Deps) {
   const inflight = new Map<string, Flight>();
   let pauseUntil = 0;
   let step = 0;
@@ -175,8 +178,9 @@ export function createTranslator({ provider, secondary, cache, acquire = createL
     try {
       const p = await provider();
       const first = await call(p, req.from, req.to, text, signal, onQueued);
-      const sec = await secondary();
-      // текст уже на языке перевода — переводим на второй язык
+      const { target, secondary } = await langs();
+      // текст уже на языке перевода — переводим на второй язык; если просили как раз второй (popup), — на «Переводить на»
+      const sec = secondary !== req.to ? secondary : target;
       if (first.detected !== req.to || sec === req.to) return { ok: true, text: first.text, detected: first.detected, to: req.to, cached: first.cached, truncated };
       const second = await call(p, first.detected, sec, text, signal, onQueued);
       return { ok: true, text: second.text, detected: first.detected, to: sec, cached: first.cached && second.cached, truncated };
