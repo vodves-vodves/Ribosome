@@ -59,7 +59,16 @@ function wanted(t: Text): boolean {
   return inline(t.previousSibling) && inline(t.nextSibling);
 }
 
-const skipped = (el: Element) => el.matches(SKIP) || (el as HTMLElement).isContentEditable;
+const MONO = /mono(space)?\b|\bcode\b|consol|courier|menlo|monaco/i;
+/** Code a site draws without `<code>` or `<pre>` (GitHub's file view, read-only editors): monospace with its whitespace kept. */
+function isCode(el: Element) {
+  const s = getComputedStyle(el);
+  return /^(pre|pre-wrap|break-spaces)$/.test(s.whiteSpace) && MONO.test(s.fontFamily);
+}
+
+const skipped = (el: Element) => el.matches(SKIP) || (el as HTMLElement).isContentEditable || isCode(el);
+/** Font and whitespace are inherited: the element's own style already tells about code around it. */
+const inSkipped = (el: Element) => !!el.closest(SKIP) || (el as HTMLElement).isContentEditable || isCode(el);
 
 /**
  * A block's nodes cut into segments Google translates separately: lines split by `<br>` and spans laid out as
@@ -105,7 +114,7 @@ export function sampleText(max = 4000): string {
   if (!root) return '';
   let p = '';
   for (const el of root.querySelectorAll('p')) {
-    if (el.closest(SKIP)) continue;
+    if (inSkipped(el)) continue;
     p += `${el.textContent!.trim()} `;
     if (p.length >= max) return p;
   }
@@ -273,11 +282,11 @@ export class PageTranslation {
         // the site rewrote a translated node (React, a counter), or filled an empty one: it's new text
         if (d) this.done.delete(t);
         const parent = t.parentElement;
-        if ((this.rounds.get(t) ?? 0) < MAX_ROUNDS && parent && !parent.isContentEditable && !parent.closest(SKIP) && wanted(t)) this.add(t);
+        if ((this.rounds.get(t) ?? 0) < MAX_ROUNDS && parent && !inSkipped(parent) && wanted(t)) this.add(t);
         continue;
       }
       const parent = r.target instanceof Element ? r.target : (r.target as ShadowRoot).host;
-      if (parent?.closest(SKIP) || (parent as HTMLElement | undefined)?.isContentEditable) continue;
+      if (!parent || inSkipped(parent)) continue;
       for (const n of r.addedNodes) {
         if (n.nodeType === Node.TEXT_NODE && wanted(n as Text)) this.add(n as Text);
         else if (n.nodeType === Node.ELEMENT_NODE && !skipped(n as Element)) this.collect(n);

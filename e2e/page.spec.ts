@@ -50,15 +50,20 @@ test('an "always translate" site is translated in place, lazily, and goes back t
   // line breaks survive, a wrapper without a box doesn't hide its text
   await expect(page.locator('#pre')).toHaveText('en:Zeile eins\nZeile zwei');
   await expect(page.locator('#dc')).toHaveText('en:Ohne Box');
-  // the site rewrites a translated node and clones a translated paragraph
+  // code drawn without <code>/<pre> stays code; a monospace heading is still text
+  await expect(page.locator('#mono')).toHaveText('en:Kopfzeile');
+  await expect(page.locator('#gh')).toHaveText("import x from 'y'; // Kommentar");
+  // the site rewrites a translated node, clones a translated paragraph and adds a line of code
   await page.evaluate(() => {
     document.querySelector('#p a')!.firstChild!.nodeValue = 'Zelle';
     const copy = document.querySelector('#p')!.cloneNode(true) as Element;
     copy.id = 'copy';
     document.querySelector('#p')!.after(copy);
+    document.querySelector('#gh')!.append('\n// noch einer');
   });
   await expect(page.locator('#p')).toHaveText('en:Ein en:Zelle en:ist alt.');
   await expect(page.locator('#copy')).toHaveText('en:Ein en:Zelle en:ist alt.');
+  await expect(page.locator('#gh')).toHaveText("import x from 'y'; // Kommentar\n// noch einer");
   // far below the screen: not yet
   await expect(page.locator('#far')).toHaveText('Ganz unten.');
   await page.locator('#far').scrollIntoViewIfNeeded();
