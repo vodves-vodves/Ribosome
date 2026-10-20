@@ -2,6 +2,8 @@ import { test as base, chromium, type BrowserContext, type Page } from '@playwri
 
 export const PAGE = 'http://ribosome.test/';
 export const ARTICLE = 'http://ribosome.test/article';
+/** Another site, in English: the browser's (and so the target) language. */
+export const ENGLISH = 'http://en.test/';
 
 type Gtx = { status: number };
 
@@ -28,6 +30,13 @@ export const test = base.extend<{ context: BrowserContext; extensionId: string; 
     });
     await context.route(PAGE, (route) =>
       route.fulfill({ contentType: 'text/html', body: '<p style="font: 20px sans-serif; margin: 100px"><span id="t">Ribosomes are ancient.</span></p>' }),
+    );
+    await context.route(ENGLISH, (route) =>
+      route.fulfill({
+        contentType: 'text/html',
+        body: `<p>Ribosomes are the protein factories of every cell. They read the genetic message carried by messenger RNA
+          and join amino acids into long chains that fold into proteins. Without ribosomes no living thing could grow.</p>`,
+      }),
     );
     await context.route(ARTICLE, (route) =>
       route.fulfill({

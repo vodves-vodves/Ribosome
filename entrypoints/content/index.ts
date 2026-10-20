@@ -66,7 +66,8 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
     theme();
     // "Always translate this site" turned on here, in another tab or from the menu
     if (auto() && !was && !page.view.on) return togglePage();
-    if (offer && !s.offerPages) {
+    // offers turned off, or the target is now the page's own language
+    if (offer && !offerable(offer)) {
       offer = '';
       pill.hide();
     }
@@ -123,9 +124,15 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
     tell(m);
   }
 
+  /** Offers are on, the page hasn't been translated in this load, and `lang` (if known) isn't the target. */
+  const offerable = (lang: string) =>
+    settings!.offerPages && !auto() && !page.view.to && !signal.aborted && lang.split('-')[0] !== settings!.target.split('-')[0];
+  /** An offer found while the tab was in the background, waiting to be seen: it would fold unread. */
+  let offerWaits = false;
+
   /** A page that isn't in the target language gets an offer. The language is detected in the browser: nothing is sent. */
   async function offerIfForeign(again = true) {
-    if (!settings!.offerPages || auto() || page.view.to || signal.aborted) return;
+    if (!offerable('')) return;
     const text = sampleText();
     // the content may still be loading: one more look a bit later
     if (text.length < 200) return void (again && setTimeout(() => offerIfForeign(false), 2500));
@@ -136,15 +143,30 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
     const top = found?.languages[0];
     if (!top || top.language === 'und' || (!found!.isReliable && top.percentage < 80)) return;
     const lang = normLang(top.language);
-    if (lang.split('-')[0] === settings!.target.split('-')[0]) return;
-    if ((await tell<boolean>({ type: 'offer:ask', host: site })) !== false || page.view.to) return;
+    // settings and the page may have changed during the awaits
+    if (!offerable(lang) || (await tell<boolean>({ type: 'offer:ask', host: site })) !== false || !offerable(lang)) return;
     offer = lang;
     pageChanged();
-    lift(host);
+    if (document.hidden) offerWaits = true;
+    else showOffer();
+  }
+
+  function showOffer() {
+    // lifting re-shows our whole layer: not under an open translation window
+    if (!active && !pinned.size) lift(host);
     pill.show();
   }
 
-  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && pageChanged(true), { signal });
+  document.addEventListener(
+    'visibilitychange',
+    () => {
+      if (document.visibilityState !== 'visible') return;
+      pageChanged(true);
+      if (offerWaits && offer) showOffer();
+      offerWaits = false;
+    },
+    { signal },
+  );
   ready.then(() => {
     if (auto()) return togglePage();
     pageChanged(true);

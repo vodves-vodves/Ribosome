@@ -69,6 +69,8 @@ export default defineBackground(() => {
 
   const OFF = 'offerOff';
   const dismissed = async () => ((await browser.storage.session.get(OFF))[OFF] as string[] | undefined) ?? [];
+  // two tabs dismissing at once must not overwrite each other's read-modify-write
+  let writes = Promise.resolve();
 
   browser.runtime.onMessage.addListener((m: PageStateMessage | ShortcutMessage | OfferMessage, sender, respond) => {
     if (m.type === 'shortcut') {
@@ -80,7 +82,7 @@ export default defineBackground(() => {
       return true;
     }
     if (m.type === 'offer:dismiss') {
-      dismissed().then((hosts) => browser.storage.session.set({ [OFF]: [...hosts, m.host] }));
+      writes = writes.then(() => dismissed().then((hosts) => browser.storage.session.set({ [OFF]: [...hosts, m.host] }))).catch(() => {});
       return;
     }
     const tab = sender.tab;

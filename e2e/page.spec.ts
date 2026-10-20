@@ -1,4 +1,4 @@
-import { ARTICLE, expect, PAGE, test, uiPoint, uiText } from './fixtures';
+import { ARTICLE, ENGLISH, expect, test, uiPoint, uiText } from './fixtures';
 
 test('a page in another language gets an offer; Translate translates it', async ({ page }) => {
   await page.goto(ARTICLE);
@@ -11,7 +11,7 @@ test('a page in another language gets an offer; Translate translates it', async 
   expect(await uiText(page, '.rb-pill.is-offer')).toBeNull();
 });
 
-test('× hides the offer on this site until the browser closes; a page in the target language gets none', async ({ page }) => {
+test('× hides the offer on this site until the browser closes', async ({ page }) => {
   await page.goto(ARTICLE);
   await expect.poll(() => uiText(page, '.rb-pill.is-offer .rb-pt')).toBe('Deutsch → English');
   const x = (await uiPoint(page, '.rb-pill .rb-x'))!;
@@ -20,11 +20,20 @@ test('× hides the offer on this site until the browser closes; a page in the ta
   await page.locator('ribosome-ui').waitFor({ state: 'attached' });
   await page.waitForTimeout(1500);
   expect(await uiText(page, '.rb-pill.is-on')).toBeNull();
+});
 
-  await page.goto(PAGE);
+test('a page in the target language gets no offer; one that becomes the target loses it', async ({ context, page }) => {
+  await page.goto(ENGLISH);
   await page.locator('ribosome-ui').waitFor({ state: 'attached' });
-  await page.waitForTimeout(1500);
+  // past the 2.5 s second look for slow pages
+  await page.waitForTimeout(3000);
   expect(await uiText(page, '.rb-pill.is-on')).toBeNull();
+
+  await page.goto(ARTICLE);
+  await expect.poll(() => uiText(page, '.rb-pill.is-offer .rb-pt')).toBe('Deutsch → English');
+  const sw = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
+  await sw.evaluate("chrome.storage.sync.set({ settings: { target: 'de' } })");
+  await expect.poll(() => uiText(page, '.rb-pill.is-on')).toBeNull();
 });
 
 test('an "always translate" site is translated in place, lazily, and goes back to the original', async ({ context, page }) => {
