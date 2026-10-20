@@ -141,7 +141,6 @@ export async function copyText(text: string, scope: Node): Promise<boolean> {
 
 const flashTimers = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
 
-/** Shows the actual copy result for 1.4 s, then restores the button. */
 export function flashCopy(btn: HTMLButtonElement, ok: boolean) {
   btn.classList.remove('is-done', 'is-fail');
   btn.classList.add(ok ? 'is-done' : 'is-fail');

@@ -17,7 +17,6 @@ export type Settings = {
 
 const secondFor = (target: string) => (target === 'en' ? 'es' : 'en');
 
-/** Translate into the browser's language when the list has it, English otherwise. */
 function defaults(): Settings {
   const ui = browser.i18n.getUILanguage();
   const target = [ui, ui.split('-')[0]!].find((l) => LANGS.includes(l)) ?? 'en';
@@ -64,7 +63,6 @@ export function watchSettings(cb: (s: Settings) => void): () => void {
 
 const dark = () => matchMedia('(prefers-color-scheme: dark)');
 
-/** Sets `data-theme` on the UI root; "auto" resolves to the current system theme. */
 export function applyTheme(el: HTMLElement, theme: Theme) {
   el.dataset.theme = theme === 'auto' ? (dark().matches ? 'dark' : 'light') : theme;
 }

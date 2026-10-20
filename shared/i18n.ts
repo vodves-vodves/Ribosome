@@ -6,7 +6,6 @@ export type Key = keyof typeof en;
 
 let lang: string | undefined;
 
-/** The browser UI language if we have it, English otherwise. */
 export function locale() {
   if (!lang) {
     const ui = browser.i18n.getUILanguage().split('-')[0]!;

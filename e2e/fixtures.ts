@@ -34,7 +34,6 @@ export const test = base.extend<{ context: BrowserContext; extensionId: string; 
 
 export const expect = test.expect;
 
-/** Drags the mouse across the whole test sentence. */
 export async function selectSentence(page: Page) {
   const b = (await page.locator('#t').boundingBox())!;
   await page.mouse.move(b.x + 1, b.y + b.height / 2);
@@ -66,7 +65,6 @@ export async function inUi<A extends unknown[], T>(page: Page, fn: (root: Shadow
   }
 }
 
-/** Center of the first visible UI element matching `selector`. */
 export const uiPoint = (page: Page, selector: string) =>
   inUi(
     page,
@@ -79,5 +77,4 @@ export const uiPoint = (page: Page, selector: string) =>
     selector,
   );
 
-/** Text of the first UI element matching `selector`. */
 export const uiText = (page: Page, selector: string) => inUi(page, (root, s) => root.querySelector(s)?.textContent ?? null, selector);

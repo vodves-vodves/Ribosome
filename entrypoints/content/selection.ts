@@ -62,7 +62,6 @@ function selectionRange(sel: ComposedSelection, roots: ShadowRoot[]): Range | nu
 
 type Field = HTMLInputElement | HTMLTextAreaElement;
 
-/** The focused input field, looking inside shadow DOM. */
 function activeField(): Field | null {
   let a = document.activeElement;
   while (a?.shadowRoot?.activeElement) a = a.shadowRoot.activeElement;

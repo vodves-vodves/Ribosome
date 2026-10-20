@@ -136,7 +136,7 @@ export class Bubble {
     return this.el.querySelector<T>(s)!;
   }
 
-  /** Translates and shows. A new selection in the same window picks the side anew. */
+  /** A new selection in the same window picks the side anew. */
   open(anchor: Anchor, req: Req) {
     this.anchor = anchor;
     this.req = req;
