@@ -35,6 +35,8 @@ export const test = base.extend<{ context: BrowserContext; extensionId: string; 
 export const expect = test.expect;
 
 export async function selectSentence(page: Page) {
+  // the content script runs at document_idle, which may come after `goto` resolves
+  await page.locator('ribosome-ui').waitFor({ state: 'attached' });
   const b = (await page.locator('#t').boundingBox())!;
   await page.mouse.move(b.x + 1, b.y + b.height / 2);
   await page.mouse.down();

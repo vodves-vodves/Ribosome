@@ -17,9 +17,12 @@ export type Settings = {
 
 const secondFor = (target: string) => (target === 'en' ? 'es' : 'en');
 
+/** UI languages that Chrome names differently from our list. */
+const UI_ALIASES: Record<string, string> = { nb: 'no', nn: 'no', 'zh-HK': 'zh-TW', 'zh-MO': 'zh-TW' };
+
 function defaults(): Settings {
   const ui = browser.i18n.getUILanguage();
-  const target = [ui, ui.split('-')[0]!].find((l) => LANGS.includes(l)) ?? 'en';
+  const target = [UI_ALIASES[ui], ui, ui.split('-')[0]!].find((l) => l && LANGS.includes(l)) ?? 'en';
   return { target, secondary: secondFor(target), source: 'auto', mode: 'icon', translateInFields: true, provider: 'google', theme: 'auto' };
 }
 
