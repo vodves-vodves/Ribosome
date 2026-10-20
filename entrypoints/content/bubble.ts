@@ -5,7 +5,7 @@ import { anchorRect, anchorShown, clampPos, headerRects, placeBox, setPos, viewp
 
 const DRAG_END = ['pointerup', 'pointercancel', 'lostpointercapture'] as const;
 
-/** Высота окна с длинным переводом: по ней выбираем сторону при открытии, а не по высоте скелета. */
+/** Height of a window with a long translation: the side is picked by it on open, not by the skeleton's height. */
 const MAX_H = 330;
 const GAP = 10;
 
@@ -64,17 +64,17 @@ export class Bubble {
     this.q('.rb-src').addEventListener('click', () => this.hooks.locate(this));
   }
 
-  /** Подпись под переводом, не меняя состояния (ошибки «Показать на странице»). */
+  /** Caption under the translation that keeps the current state ("Show on page" errors). */
   note(text: string) {
     this.v.note.textContent = text;
     this.v.note.hidden = false;
     if (this.pinned) this.clampIntoView();
   }
 
-  /** Закреплённое окно легло на подсвеченный текст — отъезжает под него, снизу нет места — над ним. */
+  /** A pinned window covering the highlighted text moves below it, or above it when there's no room below. */
   nudge(r: DOMRect) {
     if (!this.pinned) return;
-    // целевое положение из style, а не getBoundingClientRect: окно может быть посреди transition
+    // target position from style, not getBoundingClientRect: the window may be mid-transition
     const left = parseFloat(this.el.style.left);
     const top = parseFloat(this.el.style.top);
     const w = this.el.offsetWidth;
@@ -89,7 +89,7 @@ export class Bubble {
     return this.el.classList.contains('is-pinned');
   }
 
-  /** Закреплённое окно стоит на экране, а не у текста; открепили — сразу встаёт к своему тексту. */
+  /** A pinned window stays put on screen instead of following its text; unpinning snaps it back to the text. */
   togglePin() {
     const on = this.el.classList.toggle('is-pinned');
     const pin = this.q('.rb-pin');
@@ -99,19 +99,19 @@ export class Bubble {
     src.hidden = !on;
     src.textContent = on ? this.req.text.replace(/\s+/g, ' ').slice(0, 300) : '';
     this.el.style.visibility = '';
-    this.el.style.clipPath = ''; // закреплённое стоит на экране поверх шапки сайта
+    this.el.style.clipPath = ''; // a pinned window sits on screen above the site's header
     this.hooks.pin(this, on);
     if (on) return;
     this.side = undefined;
     this.follow();
   }
 
-  /** Перетаскивание закреплённого окна за шапку. Тач, прерванный панорамированием, тоже отпускает окно. */
+  /** Drags a pinned window by its header. A touch interrupted by panning releases it too. */
   private drag(e: PointerEvent) {
     if (!this.pinned || e.button !== 0 || (e.target as Element).closest('button')) return;
     const el = this.el;
     const bh = e.currentTarget as HTMLElement;
-    el.parentElement!.append(el); // поверх остальных закреплённых
+    el.parentElement!.append(el); // above the other pinned windows
     const sx = e.clientX - parseFloat(el.style.left);
     const sy = e.clientY - parseFloat(el.style.top);
     const move = (ev: PointerEvent) => setPos(el, clampPos(el, ev.clientX - sx, ev.clientY - sy));
@@ -135,7 +135,7 @@ export class Bubble {
     return this.el.querySelector<T>(s)!;
   }
 
-  /** Перевести и показать. Новое выделение в том же окне: сторона выбирается заново. */
+  /** Translates and shows. A new selection in the same window picks the side anew. */
   open(anchor: Anchor, req: Req) {
     this.anchor = anchor;
     this.req = req;
@@ -155,7 +155,7 @@ export class Bubble {
     this.el.classList.add('is-in');
   }
 
-  /** Чтение для кадра: куда встать. null — якорь не виден, окно прячем, а не прижимаем к краю. */
+  /** Read phase of a frame. null: the anchor is out of sight, so the window hides instead of sticking to the edge. */
   measure(): Pos | null {
     if (!this.el.classList.contains('is-on')) return null;
     const r = anchorRect(this.anchor);
@@ -163,7 +163,7 @@ export class Bubble {
     return placeBox(this.el.offsetWidth, this.el.offsetHeight, r, GAP, this.side, MAX_H, headerRects((this.scope as ShadowRoot).host));
   }
 
-  /** Запись для кадра. */
+  /** Write phase of a frame. */
   apply(p: Pos | null) {
     this.el.style.visibility = p ? '' : 'hidden';
     if (!p) return;

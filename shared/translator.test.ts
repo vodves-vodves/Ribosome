@@ -19,7 +19,7 @@ const fake = (impl?: (text: string, from: string, to: string) => { text: string;
   return { p, calls };
 };
 
-// лимитер нужен только в своём тесте, остальным он мешает фейковыми таймерами
+// only the limiter test needs a real limiter; elsewhere it gets in the way of fake timers
 const setup = (p: Provider, secondary = 'en', acquire: Acquire = async () => {}) =>
   createTranslator({ provider: () => p, langs: () => ({ target: 'ru', secondary }), cache: memCache(), acquire });
 const never = new AbortController().signal;
@@ -27,7 +27,7 @@ const never = new AbortController().signal;
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
-test('лимитер: 30 запросов подряд — не больше 20 за 10 с, ни один не потерян и не продублирован', async () => {
+test('limiter: 30 requests in a row, at most 20 per 10 s, none lost or duplicated', async () => {
   const { p, calls } = fake();
   const t = setup(p, 'en', createLimiter());
   const queued: number[] = [];
@@ -42,7 +42,7 @@ test('лимитер: 30 запросов подряд — не больше 20 
   expect(queued.length).toBeGreaterThan(0);
 });
 
-test('кэш и дедуп: одинаковый текст — один запрос', async () => {
+test('cache and dedup: the same text makes one request', async () => {
   const { p, calls } = fake();
   const t = setup(p);
   const req = { text: 'hello', from: 'auto', to: 'ru' };
@@ -54,7 +54,7 @@ test('кэш и дедуп: одинаковый текст — один зап�
   expect(c).toMatchObject({ ok: true, cached: true });
 });
 
-test('отмена одного из ждущих не отменяет запрос для второго', async () => {
+test('cancelling one waiter keeps the request for the other', async () => {
   const calls: string[] = [];
   const p: Provider = {
     id: 'slow',
@@ -68,7 +68,7 @@ test('отмена одного из ждущих не отменяет запр
   const ctrl = new AbortController();
   const a = t.translate(req, ctrl.signal, () => {});
   const b = t.translate(req, never, () => {});
-  await vi.advanceTimersByTimeAsync(0); // оба ждут один запрос
+  await vi.advanceTimersByTimeAsync(0); // both wait for the same request
   ctrl.abort();
   await expect(a).rejects.toBeDefined();
   await vi.advanceTimersByTimeAsync(1000);
@@ -76,7 +76,7 @@ test('отмена одного из ждущих не отменяет запр
   expect(calls).toHaveLength(1);
 });
 
-test('второй язык: текст уже на языке перевода', async () => {
+test('second language: text already in the target language', async () => {
   const { p, calls } = fake((text, _from, to) => ({ text: `${to}:${text}`, detected: 'ru' }));
   const t = setup(p, 'en');
   const r = await t.translate({ text: 'Рибосомы древние.', from: 'auto', to: 'ru' }, never, () => {});
@@ -84,7 +84,7 @@ test('второй язык: текст уже на языке перевода'
   expect(calls.map((c) => [c.from, c.to])).toEqual([['auto', 'ru'], ['ru', 'en']]);
 });
 
-test('второй язык совпал с запрошенным — переводим на «Переводить на», а не эхом', async () => {
+test('second language equal to the requested one translates to the target, not back to itself', async () => {
   const { p, calls } = fake((text, _from, to) => ({ text: `${to}:${text}`, detected: 'en' }));
   const t = setup(p, 'en');
   const r = await t.translate({ text: 'Ribosomes are ancient.', from: 'auto', to: 'en' }, never, () => {});
@@ -92,7 +92,7 @@ test('второй язык совпал с запрошенным — пере�
   expect(calls.map((c) => [c.from, c.to])).toEqual([['auto', 'en'], ['en', 'ru']]);
 });
 
-test('без букв — nothing без запроса; длинный текст обрезается', async () => {
+test('no letters gives nothing without a request; long text is truncated', async () => {
   const { p, calls } = fake();
   const t = setup(p);
   expect(await t.translate({ text: ' 12 345 — … ', from: 'auto', to: 'ru' }, never, () => {})).toEqual({ ok: false, error: 'nothing' });
@@ -102,7 +102,7 @@ test('без букв — nothing без запроса; длинный текс
   expect(calls[0]!.text).toHaveLength(5000);
 });
 
-test('backoff на 429: пауза 2 с, в паузе запросы не уходят, после успеха сброс', async () => {
+test('backoff on 429: 2 s pause, no requests during it, reset after success', async () => {
   let limited = true;
   const { p, calls } = fake((text, _f, to) => {
     if (limited) throw new ProviderError('rate_limited', 429);
@@ -123,7 +123,7 @@ test('backoff на 429: пауза 2 с, в паузе запросы не ух�
   expect(await t.translate({ text: 'e', from: 'auto', to: 'ru' }, never, () => {})).toMatchObject({ retryAfter: 2 });
 });
 
-test('ошибки: 5xx — server со статусом, сбой fetch — offline', async () => {
+test('errors: 5xx is server with status, fetch failure is offline', async () => {
   const t1 = setup(fake(() => { throw new ProviderError('server', 503); }).p);
   expect(await t1.translate({ text: 'a', from: 'auto', to: 'ru' }, never, () => {})).toEqual({ ok: false, error: 'server', status: 503 });
   const t2 = setup(fake(() => { throw new TypeError('Failed to fetch'); }).p);

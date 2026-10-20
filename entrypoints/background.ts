@@ -16,7 +16,7 @@ export default defineBackground(() => {
     cache: sessionCache(),
   });
 
-  // порт на запрос: клиент закрыл порт (новое выделение, закрытое окно, закрытый popup) — запрос отменяется
+  // One port per request: the client closing it (new selection, closed window or popup) cancels the request
   browser.runtime.onConnect.addListener((port) => {
     if (port.name !== PORT) return;
     const ctrl = new AbortController();

@@ -5,7 +5,7 @@ export type Theme = 'auto' | 'light' | 'dark';
 
 export type Settings = {
   target: string;
-  /** Язык, на который переводим текст, уже написанный на `target`. Никогда не равен `target`. */
+  /** Language for text that is already in `target`. Never equal to `target`. */
   secondary: string;
   source: string;
   mode: Mode;
@@ -26,14 +26,14 @@ export const DEFAULTS: Settings = {
 
 const KEY = 'settings';
 
-/** Повреждённое сохранённое значение (`secondary === target`) чиним, а не тащим дальше. */
+/** A corrupted stored value (`secondary === target`) is fixed rather than carried along. */
 export function normalize(raw?: Partial<Settings>): Settings {
   const s = { ...DEFAULTS, ...raw };
   if (s.secondary === s.target) s.secondary = s.target === 'en' ? 'ru' : 'en';
   return s;
 }
 
-/** Совпадение «переводить на» и «второго языка» разрешается обменом. */
+/** "Translate to" colliding with the second language is resolved by swapping them. */
 export function merge(prev: Settings, patch: Partial<Settings>): Settings {
   const next = { ...prev, ...patch };
   if (next.secondary === next.target) {
@@ -64,7 +64,7 @@ export function watchSettings(cb: (s: Settings) => void): () => void {
 
 const dark = () => matchMedia('(prefers-color-scheme: dark)');
 
-/** Ставит `data-theme` на корень UI и следит за системной темой, пока выбрано «Авто». */
+/** Sets `data-theme` on the UI root; "auto" resolves to the current system theme. */
 export function applyTheme(el: HTMLElement, theme: Theme) {
   el.dataset.theme = theme === 'auto' ? (dark().matches ? 'dark' : 'light') : theme;
 }

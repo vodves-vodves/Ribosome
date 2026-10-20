@@ -5,8 +5,8 @@ import type { Cache } from './translator';
 type Entry = { v: ProviderResult; t: number };
 
 /**
- * Кэш переводов в `storage.session`: живёт до закрытия браузера и переживает перезапуск service worker.
- * `limit` записей, вытесняется самая старая. Каждая запись — свой ключ, чтобы не переписывать весь кэш.
+ * Translation cache in `storage.session`: lives until the browser closes and survives service worker restarts.
+ * Holds `limit` entries, evicting the oldest. Each entry is its own key so the whole cache is never rewritten.
  */
 export function sessionCache(limit = 500): Cache {
   const area = browser.storage.session;
@@ -33,7 +33,7 @@ export function sessionCache(limit = 500): Cache {
       try {
         await area.set({ [k]: e });
       } catch {
-        // квота session storage: освобождаем место и пробуем ещё раз, не вышло — живём без этой записи
+        // session storage quota: free some room and retry; if that fails too, go on without this entry
         await evict(m, 50);
         try {
           await area.set({ [k]: e });

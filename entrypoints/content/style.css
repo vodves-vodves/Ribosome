@@ -1,21 +1,21 @@
-/* UI на странице: иконка-триггер, окна перевода, подсветка. Общие токены — shared/ui/base.css. */
+/* On-page UI: trigger icon, translation windows, highlight. Shared tokens live in shared/ui/base.css. */
 .rb { position: fixed; inset: 0; pointer-events: none; }
 .rb > * { pointer-events: auto; }
-/* пока тянут выделение со страницы, окна прозрачны для указателя: конец выделения ложится на текст под окном, а не в конец документа */
+/* while a selection is being dragged, windows let the pointer through: the selection ends on the text under the window, not at the end of the document */
 .rb.is-passive > * { pointer-events: none; }
 
-/* слои: триггер выше всего, обычное окно выше закреплённых */
+/* layers: the trigger on top, the regular window above pinned ones */
 .rb-trigger { z-index: 3; }
 .rb-bubble { z-index: 2; }
 .rb-bubble.is-pinned { z-index: 1; }
 
-/* иконка-триггер у выделения */
+/* trigger icon */
 .rb-trigger { position: fixed; display: none; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 14px; place-items: center; color: var(--accent); opacity: 0; transform: scale(.9); transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out); }
 .rb-trigger.is-on { display: grid; }
 .rb-trigger.is-in { opacity: 1; transform: none; }
 .rb-trigger svg { width: 16px; height: 16px; }
 
-/* окно перевода */
+/* translation window */
 .rb-bubble { position: fixed; top: 0; left: 0; display: none; width: max-content; max-width: min(380px, calc(100vw - 16px)); border-radius: 14px; opacity: 0; transform: scale(.96); transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out); }
 .rb-bubble.is-on { display: block; }
 .rb-bubble.is-in { opacity: 1; transform: none; }
@@ -27,7 +27,7 @@
 .rb-prov { font-size: 12px; color: var(--t3); letter-spacing: .01em; white-space: nowrap; }
 .rb-acts { display: flex; gap: 6px; }
 
-/* закреплённое окно: прицел, строка-источник, перетаскивание за шапку */
+/* pinned window: locate button, source line, drag by header */
 .rb-loc { display: none; }
 .rb-bubble.is-pinned .rb-loc { display: grid; }
 .rb-bubble.is-pinned .rb-pin { background: var(--accent); color: #fff; }
@@ -38,7 +38,7 @@
 .rb-bubble.is-drag { transition: none; }
 .rb-bubble.is-drag .rb-bh { cursor: grabbing; }
 
-/* подсветка исходного текста: наложение в нашем слое, DOM сайта не трогаем */
+/* source text highlight: an overlay in our layer, the site's DOM is untouched */
 .rb-flash { position: fixed; pointer-events: none; border-radius: 3px; background: var(--accent); opacity: .26; animation: rb-flash 1.4s var(--ease-out) forwards; }
 @keyframes rb-flash { 0%, 45% { opacity: .26; } 100% { opacity: 0; } }
 

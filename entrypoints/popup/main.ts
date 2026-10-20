@@ -17,14 +17,14 @@ $('#ver').textContent = `Ribosome ${browser.runtime.getManifest().version}`;
 function fill(sel: HTMLSelectElement, codes: string[]) {
   sel.replaceChildren(...codes.map((c) => new Option(langName(c), c)));
 }
-/** Google мог определить язык, которого нет в списке, — добавляем, чтобы swap не потерял его. */
+/** Google may detect a language missing from the list: add it so swap doesn't lose it. */
 function ensure(sel: HTMLSelectElement, code: string) {
   if (![...sel.options].some((o) => o.value === code)) sel.add(new Option(langName(code), code));
 }
 
 let S: Settings = await loadSettings();
 
-/* ---------- Вкладки ---------- */
+/* ---------- Tabs ---------- */
 $('#tabs').addEventListener('click', (e) => {
   const b = (e.target as Element).closest<HTMLElement>('[data-tab]');
   if (!b) return;
@@ -33,7 +33,7 @@ $('#tabs').addEventListener('click', (e) => {
 });
 $$('.rb-tab').forEach(overlayScrollbar);
 
-/* ---------- Перевод ---------- */
+/* ---------- Translate ---------- */
 const trIn = $<HTMLTextAreaElement>('#tr-in');
 const trFrom = $<HTMLSelectElement>('#tr-from');
 const trTo = $<HTMLSelectElement>('#tr-to');
@@ -51,7 +51,7 @@ let state: State | null = null;
 let req: Req | null = null;
 const runner = createRunner((s) => {
   state = s;
-  if (s.kind === 'ok') trLab.textContent = langName(s.to); // фактический язык: с учётом второго
+  if (s.kind === 'ok') trLab.textContent = langName(s.to); // the actual language, second-language rule included
   render(view, s);
 });
 
@@ -85,12 +85,12 @@ trIn.addEventListener('input', () => {
 trFrom.addEventListener('change', run);
 trTo.addEventListener('change', run);
 
-// меняем фактическую пару: язык результата → «Откуда», определённый → «Куда». Значения пилюль при «Авто» и втором языке врут
+// swap the actual pair: result language to From, detected one to To. The pills lie with Auto and the second language
 $('#tr-swap').addEventListener('click', () => {
   let from: string;
   let to: string;
   clearTimeout(inT);
-  // результат годится, только если он для того, что сейчас в поле и в пилюлях: ввод мог ещё ждать debounce
+  // the result counts only if it matches the field and the pills right now: input may still be waiting on the debounce
   const fresh = req && req.text === trIn.value.trim() && req.from === trFrom.value && req.to === trTo.value;
   if (state?.kind === 'ok' && fresh) {
     from = state.to;
@@ -114,7 +114,7 @@ view.copy.addEventListener('click', async () => {
 view.retry.addEventListener('click', () => (state?.kind === 'ctx' ? location.reload() : req && runner.run(req)));
 trLab.textContent = langName(trTo.value);
 
-/* ---------- Настройки: сохранение по изменению ---------- */
+/* ---------- Settings, saved on change ---------- */
 fill($('[data-set=target]'), LANGS);
 fill($('[data-set=secondary]'), LANGS);
 fill($('[data-set=source]'), ['auto', ...LANGS]);
@@ -131,7 +131,7 @@ async function save(patch: Partial<Settings>) {
   const prevTarget = S.target;
   S = await saveSettings(patch);
   apply();
-  // «Переводить на» (или обмен со вторым языком) меняет пилюлю «Куда» и результат
+  // a new "Translate to" (or a swap with the second language) changes the To pill and the result
   if (S.target !== prevTarget) {
     trTo.value = S.target;
     run();

@@ -1,4 +1,4 @@
-// Состояния перевода, общие для окна на странице и popup: тексты, скелет, отсчёт паузы, копирование.
+// Translation states shared by the on-page window and the popup: texts, skeleton, pause countdown, copying.
 import { requestTranslation } from '../client';
 import type { Req } from '../messages';
 import { COPY_LABEL, ICON } from './icons';
@@ -67,7 +67,7 @@ export function render(v: View, s: State) {
   v.bt.dispatchEvent(new Event('rb:content'));
 }
 
-/** Один запрос за раз: новый `run` отменяет прежний. Скелет не мигает на ответе из кэша, после паузы 429 повторяет сам. */
+/** One request at a time: a new `run` cancels the previous one. No skeleton flash on cached answers; retries by itself after a 429 pause. */
 export function createRunner(onState: (s: State) => void) {
   let stop = () => {};
   const run = (req: Req) => {
@@ -84,7 +84,7 @@ export function createRunner(onState: (s: State) => void) {
     };
     const go = () => {
       let queued = false;
-      // кэш отвечает за миллисекунды: скелет — только если ответа нет дольше 80 мс и запрос не в очереди
+      // the cache answers in milliseconds: show the skeleton only if there's no answer after 80 ms and the request isn't queued
       timer = setTimeout(() => alive && !queued && onState({ kind: 'loading' }), 80);
       const r = requestTranslation(req, () => {
         queued = true;
@@ -113,7 +113,7 @@ export function createRunner(onState: (s: State) => void) {
   return { run, stop: () => stop() };
 }
 
-/** `navigator.clipboard` нет на http-страницах — тогда execCommand через временное поле внутри `scope` (нашего shadow root). */
+/** `navigator.clipboard` is missing on http pages; then execCommand on a temporary field inside `scope` (our shadow root). */
 export async function copyText(text: string, scope: Node): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
@@ -140,7 +140,7 @@ export async function copyText(text: string, scope: Node): Promise<boolean> {
 
 const flashTimers = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
 
-/** Честный результат копирования на 1,4 с, потом кнопка возвращается. */
+/** Shows the actual copy result for 1.4 s, then restores the button. */
 export function flashCopy(btn: HTMLButtonElement, ok: boolean) {
   btn.classList.remove('is-done', 'is-fail');
   btn.classList.add(ok ? 'is-done' : 'is-fail');
@@ -155,7 +155,7 @@ export function flashCopy(btn: HTMLButtonElement, ok: boolean) {
   );
 }
 
-/** Свой ползунок для `sc` (системный спрятан классом `rb-scroll`); рисуется в positioned-родителе. */
+/** Custom scrollbar thumb for `sc` (the native one is hidden by `rb-scroll`), drawn in a positioned parent. */
 export function overlayScrollbar(sc: HTMLElement) {
   sc.classList.add('rb-scroll');
   const th = document.createElement('div');

@@ -1,4 +1,4 @@
-/** Языки в списках. Подписи — самоназвания из Intl.DisplayNames, кроме тех, что он называет неудачно. */
+/** Languages in the lists. Labels are endonyms from Intl.DisplayNames, except where it names them poorly. */
 export const LANGS = [
   'ru', 'en', 'uk', 'be', 'kk', 'de', 'fr', 'es', 'it', 'pt', 'pl', 'cs', 'nl', 'sv', 'fi', 'no', 'da', 'tr', 'el',
   'bg', 'sr', 'ro', 'hu', 'lt', 'lv', 'et', 'ka', 'hy', 'az', 'uz', 'he', 'ar', 'fa', 'hi', 'zh-CN', 'zh-TW', 'ja',
@@ -16,6 +16,6 @@ export function langName(code: string): string {
   return code.toUpperCase();
 }
 
-/** Google отдаёт устаревшие коды для иврита и яванского. */
+/** Google returns legacy codes for Hebrew and Javanese. */
 const ALIASES: Record<string, string> = { iw: 'he', jw: 'jv' };
 export const normLang = (code: string) => ALIASES[code] ?? code;

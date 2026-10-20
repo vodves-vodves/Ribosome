@@ -1,4 +1,4 @@
-/* Токены и общие элементы UI Ribosome — окно перевода на странице и popup. Вариант «Стекло». */
+/* Ribosome UI tokens and shared elements for the on-page window and the popup. */
 .rb {
   --ui-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", Inter, Roboto, sans-serif;
   --dur-fast: 120ms;
@@ -55,7 +55,7 @@
   box-shadow: var(--shadow), inset 0 0 0 .5px var(--hairline);
 }
 
-/* кнопки */
+/* buttons */
 .rb-btn { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px 0 8px; border: 0; border-radius: 8px; background: var(--fill); color: var(--t1); font: 500 13px/1 var(--ui-font); letter-spacing: .01em; white-space: nowrap; transition: background var(--dur-fast) var(--ease-out), transform 90ms var(--ease-out), color var(--dur-fast); }
 .rb-btn svg { width: 14px; height: 14px; }
 .rb-btn:hover { background: var(--fill2); }
@@ -66,7 +66,7 @@
 .rb-ib:hover { background: var(--fill2); }
 .rb-ib svg { width: 11px; height: 11px; }
 
-/* текст перевода, подпись, скелет */
+/* translation text, caption, skeleton */
 .rb-bt, .rb-ta, .rb-res { user-select: text; }
 .rb-bt { font-size: 15px; line-height: 1.45; overflow: auto; color: var(--t1); text-wrap: pretty; overflow-wrap: anywhere; white-space: pre-line; }
 .rb-bt.is-empty { color: var(--t3); }
@@ -76,13 +76,13 @@
 .rb-sk i:nth-child(2) { width: 72%; }
 @keyframes rb-sh { to { background-position: -200% 0; } }
 
-/* системный скроллбар прячем, свой ползунок как в macOS — виден при прокрутке и наведении */
+/* native scrollbar hidden; a macOS-like thumb shows while scrolling and on hover */
 .rb-scroll { scrollbar-width: none; }
 .rb-scroll::-webkit-scrollbar { display: none; }
 .rb-thumb { position: absolute; right: 4px; width: 5px; border-radius: 3px; background: var(--thumb); opacity: 0; pointer-events: none; transition: opacity 180ms var(--ease-out); z-index: 5; }
 .rb-thumb.is-scrolling, :hover > .rb-thumb { opacity: 1; }
 
-/* выпадающие списки: нативный select с appearance: base-select, панель рисуем сами */
+/* dropdowns: native select with appearance: base-select, the panel is ours */
 .rb select, .rb ::picker(select) { appearance: base-select; }
 .rb select::picker-icon { display: none; }
 .rb ::picker(select) { border: 0; padding: 5px; margin: 6px 0; min-width: anchor-size(width); max-height: 300px; border-radius: 12px; background: var(--glass); -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%); box-shadow: var(--shadow), inset 0 0 0 .5px var(--hairline); color: var(--t1); scrollbar-width: thin; opacity: 0; transform: scale(.97); transform-origin: top center; transition: opacity 140ms var(--ease-out), transform 140ms var(--ease-out), display 140ms allow-discrete, overlay 140ms allow-discrete; }

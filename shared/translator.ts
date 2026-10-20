@@ -1,4 +1,4 @@
-// Единственная точка выхода в сеть и вся защита от спама: кэш, дедуп, отмена, лимитер, backoff.
+// The only way out to the network, with all the spam protection: cache, dedup, cancellation, limiter, backoff.
 import { normLang } from './langs';
 import { MAX_TEXT, type Req, type TranslateResponse } from './messages';
 import { ProviderError, type Provider, type ProviderResult } from './providers/types';
@@ -11,8 +11,8 @@ export interface Cache {
 export type Acquire = (signal: AbortSignal, onQueued: () => void) => Promise<void>;
 
 /**
- * Не чаще одного запроса в `gap` мс и не больше `max` за `window` мс. Сверх лимита — очередь, не отбрасывание.
- * Не стартовал за `notice` мс — `onQueued`: короткое ожидание интервала в 250 мс «очередью» не показываем.
+ * At most one request per `gap` ms and `max` per `window` ms. Requests over the limit queue up, none are dropped.
+ * `onQueued` fires only after `notice` ms without a start, so a short 250 ms wait isn't shown as "queued".
  */
 export function createLimiter({ gap = 250, max = 20, window = 10_000, notice = 500 } = {}): Acquire {
   const starts: number[] = [];
@@ -70,7 +70,7 @@ export function createLimiter({ gap = 250, max = 20, window = 10_000, notice = 5
     });
 }
 
-/** Пауза после 429/403: запросы не уходят, отвечаем `rate_limited`. */
+/** Pause after 429/403: no requests go out, the answer is `rate_limited`. */
 class Paused extends Error {}
 
 type Flight = {
@@ -83,7 +83,7 @@ type Flight = {
 
 type Deps = {
   provider: () => Provider | Promise<Provider>;
-  /** Языки из настроек для правила второго языка. */
+  /** Languages from settings for the second-language rule. */
   langs: () => Langs | Promise<Langs>;
   cache: Cache;
   acquire?: Acquire;
@@ -110,7 +110,7 @@ export function createTranslator({ provider, langs, cache, acquire = createLimit
       await cache.set(key, out).catch(() => {});
       return out;
     } catch (e) {
-      // параллельные запросы получают 429 пачкой — пауза растёт один раз, а не на каждый ответ
+      // parallel requests get 429s in a batch: grow the pause once, not per response
       if (e instanceof ProviderError && e.kind === 'rate_limited' && Date.now() >= pauseUntil) {
         step++;
         pauseUntil = Date.now() + Math.min(2 ** step, 60) * 1000;
@@ -119,7 +119,7 @@ export function createTranslator({ provider, langs, cache, acquire = createLimit
     }
   }
 
-  /** Одинаковый ключ уже в полёте — второй fetch не создаётся. Fetch отменяется, только когда ушли все ждущие. */
+  /** A key already in flight doesn't start a second fetch. The fetch is aborted only when every waiter has left. */
   function join(
     key: string,
     signal: AbortSignal,
@@ -136,7 +136,7 @@ export function createTranslator({ provider, langs, cache, acquire = createLimit
           f.queued = true;
           f.listeners.forEach((l) => l());
         },
-        () => (f.queued = false), // вышел из очереди: присоединившимся позже «в очереди» не показываем
+        () => (f.queued = false), // left the queue: waiters joining later don't see "queued"
       ).finally(() => {
         if (inflight.get(key) === f) inflight.delete(key);
       });
@@ -173,13 +173,13 @@ export function createTranslator({ provider, langs, cache, acquire = createLimit
     let text = req.text.trim();
     if (!/\p{L}/u.test(text)) return { ok: false, error: 'nothing' };
     const truncated = text.length > MAX_TEXT;
-    // не разрезать суррогатную пару на границе
+    // don't split a surrogate pair at the boundary
     if (truncated) text = text.slice(0, /[\uD800-\uDBFF]/.test(text.charAt(MAX_TEXT - 1)) ? MAX_TEXT - 1 : MAX_TEXT);
     try {
       const p = await provider();
       const first = await call(p, req.from, req.to, text, signal, onQueued);
       const { target, secondary } = await langs();
-      // текст уже на языке перевода — переводим на второй язык; если просили как раз второй (popup), — на «Переводить на»
+      // text already in the target language goes to the second language; if the second language was requested (popup), to "Translate to"
       const sec = secondary !== req.to ? secondary : target;
       if (first.detected !== req.to || sec === req.to) return { ok: true, text: first.text, detected: first.detected, to: req.to, cached: first.cached, truncated };
       const second = await call(p, first.detected, sec, text, signal, onQueued);
