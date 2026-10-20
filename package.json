@@ -1,8 +1,10 @@
 {
   "name": "ribosome",
-  "description": "Перевод выделенного текста прямо на странице",
+  "description": "Translate selected text right on the page",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
+  "license": "MIT",
+  "repository": "github:vodves-vodves/Ribosome",
   "type": "module",
   "scripts": {
     "dev": "wxt",
