@@ -1,6 +1,7 @@
 import '@/shared/ui/base.css';
 import './style.css';
 import { browser } from 'wxt/browser';
+import { locale, t, type Key } from '@/shared/i18n';
 import { LANGS, langName } from '@/shared/langs';
 import { MAX_TEXT, type Req } from '@/shared/messages';
 import { applyTheme, loadSettings, saveSettings, watchSystemTheme, type Settings } from '@/shared/settings';
@@ -10,21 +11,26 @@ import { copyText, createRunner, flashCopy, overlayScrollbar, render, type State
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector<T>(s)!;
 const $$ = <T extends HTMLElement = HTMLElement>(s: string) => [...document.querySelectorAll<T>(s)];
 
-document.querySelectorAll<HTMLElement>('i[data-icon]').forEach((i) => (i.innerHTML = ICON[i.dataset.icon as keyof typeof ICON]));
+document.documentElement.lang = locale();
+$$('[data-i18n]').forEach((el) => (el.textContent = t(el.dataset.i18n as Key)));
+$$('[data-i18n-label]').forEach((el) => (el.ariaLabel = t(el.dataset.i18nLabel as Key)));
+$$('[data-i18n-title]').forEach((el) => (el.title = el.ariaLabel = t(el.dataset.i18nTitle as Key)));
+$<HTMLTextAreaElement>('#tr-in').placeholder = t('inputPlaceholder');
+$$('i[data-icon]').forEach((i) => (i.innerHTML = ICON[i.dataset.icon as keyof typeof ICON]));
 $('#tr-copy').innerHTML = COPY_LABEL;
 $('#ver').textContent = `Ribosome ${browser.runtime.getManifest().version}`;
 
 function fill(sel: HTMLSelectElement, codes: string[]) {
   sel.replaceChildren(...codes.map((c) => new Option(langName(c), c)));
 }
-/** Google мог определить язык, которого нет в списке, — добавляем, чтобы swap не потерял его. */
+/** Google may detect a language missing from the list: add it so swap doesn't lose it. */
 function ensure(sel: HTMLSelectElement, code: string) {
   if (![...sel.options].some((o) => o.value === code)) sel.add(new Option(langName(code), code));
 }
 
 let S: Settings = await loadSettings();
 
-/* ---------- Вкладки ---------- */
+/* ---------- Tabs ---------- */
 $('#tabs').addEventListener('click', (e) => {
   const b = (e.target as Element).closest<HTMLElement>('[data-tab]');
   if (!b) return;
@@ -33,7 +39,7 @@ $('#tabs').addEventListener('click', (e) => {
 });
 $$('.rb-tab').forEach(overlayScrollbar);
 
-/* ---------- Перевод ---------- */
+/* ---------- Translate ---------- */
 const trIn = $<HTMLTextAreaElement>('#tr-in');
 const trFrom = $<HTMLSelectElement>('#tr-from');
 const trTo = $<HTMLSelectElement>('#tr-to');
@@ -51,7 +57,7 @@ let state: State | null = null;
 let req: Req | null = null;
 const runner = createRunner((s) => {
   state = s;
-  if (s.kind === 'ok') trLab.textContent = langName(s.to); // фактический язык: с учётом второго
+  if (s.kind === 'ok') trLab.textContent = langName(s.to); // the actual language, second-language rule included
   render(view, s);
 });
 
@@ -62,7 +68,7 @@ function run() {
     runner.stop();
     state = req = null;
     view.note.hidden = view.copy.hidden = view.retry.hidden = true;
-    view.bt.textContent = 'Перевод появится здесь';
+    view.bt.textContent = t('outputPlaceholder');
     view.bt.classList.add('is-empty');
     view.bt.dispatchEvent(new Event('rb:content'));
     return;
@@ -85,12 +91,12 @@ trIn.addEventListener('input', () => {
 trFrom.addEventListener('change', run);
 trTo.addEventListener('change', run);
 
-// меняем фактическую пару: язык результата → «Откуда», определённый → «Куда». Значения пилюль при «Авто» и втором языке врут
+// swap the actual pair: result language to From, detected one to To. The pills lie with Auto and the second language
 $('#tr-swap').addEventListener('click', () => {
   let from: string;
   let to: string;
   clearTimeout(inT);
-  // результат годится, только если он для того, что сейчас в поле и в пилюлях: ввод мог ещё ждать debounce
+  // the result counts only if it matches the field and the pills right now: input may still be waiting on the debounce
   const fresh = req && req.text === trIn.value.trim() && req.from === trFrom.value && req.to === trTo.value;
   if (state?.kind === 'ok' && fresh) {
     from = state.to;
@@ -114,7 +120,7 @@ view.copy.addEventListener('click', async () => {
 view.retry.addEventListener('click', () => (state?.kind === 'ctx' ? location.reload() : req && runner.run(req)));
 trLab.textContent = langName(trTo.value);
 
-/* ---------- Настройки: сохранение по изменению ---------- */
+/* ---------- Settings, saved on change ---------- */
 fill($('[data-set=target]'), LANGS);
 fill($('[data-set=secondary]'), LANGS);
 fill($('[data-set=source]'), ['auto', ...LANGS]);
@@ -131,7 +137,7 @@ async function save(patch: Partial<Settings>) {
   const prevTarget = S.target;
   S = await saveSettings(patch);
   apply();
-  // «Переводить на» (или обмен со вторым языком) меняет пилюлю «Куда» и результат
+  // a new "Translate to" (or a swap with the second language) changes the To pill and the result
   if (S.target !== prevTarget) {
     trTo.value = S.target;
     run();

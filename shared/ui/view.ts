@@ -1,6 +1,7 @@
-// Состояния перевода, общие для окна на странице и popup: тексты, скелет, отсчёт паузы, копирование.
+// Translation states shared by the on-page window and the popup: texts, skeleton, pause countdown, copying.
 import { requestTranslation } from '../client';
-import type { Req } from '../messages';
+import { t } from '../i18n';
+import { MAX_TEXT, type Req } from '../messages';
 import { COPY_LABEL, ICON } from './icons';
 
 export type View = { bt: HTMLElement; note: HTMLElement; copy: HTMLButtonElement; retry: HTMLButtonElement };
@@ -19,10 +20,10 @@ const SKELETON = '<div class="rb-sk"><i></i><i></i></div>';
 
 export function render(v: View, s: State) {
   v.note.hidden = v.retry.hidden = v.copy.hidden = true;
-  v.retry.textContent = 'Повторить';
+  v.retry.textContent = t('retry');
   v.bt.classList.remove('is-empty');
-  const note = (t: string) => {
-    v.note.textContent = t;
+  const note = (text: string) => {
+    v.note.textContent = text;
     v.note.hidden = false;
   };
   switch (s.kind) {
@@ -31,43 +32,43 @@ export function render(v: View, s: State) {
       break;
     case 'queued':
       v.bt.innerHTML = SKELETON;
-      note('Много запросов подряд — в очереди…');
+      note(t('queued'));
       break;
     case 'ok':
       v.bt.textContent = s.text;
       v.copy.hidden = !s.text;
-      if (s.truncated) note('Переведены первые 5000 символов — выделение длиннее.');
+      if (s.truncated) note(t('truncated', MAX_TEXT));
       break;
     case 'nothing':
-      v.bt.textContent = 'Нечего переводить.';
+      v.bt.textContent = t('nothing');
       v.bt.classList.add('is-empty');
-      note('В выделении только цифры и знаки.');
+      note(t('nothingNote'));
       break;
     case 'rate_limited':
-      v.bt.textContent = 'Google ограничил запросы.';
-      note(`Пауза ${s.wait} с, потом повторим сами.`);
+      v.bt.textContent = t('rateLimited');
+      note(t('rateLimitedNote', s.wait));
       break;
     case 'offline':
-      v.bt.textContent = 'Нет соединения.';
-      note('Проверь интернет и повтори.');
+      v.bt.textContent = t('offline');
+      note(t('offlineNote'));
       v.retry.hidden = false;
       break;
     case 'server':
-      v.bt.textContent = 'Google Translate не отвечает.';
-      note(`${s.status ? `Ошибка ${s.status}. ` : ''}Повтори через минуту.`);
+      v.bt.textContent = t('server');
+      note(s.status ? `${t('serverStatus', s.status)} ${t('serverNote')}` : t('serverNote'));
       v.retry.hidden = false;
       break;
     case 'ctx':
-      v.bt.textContent = 'Расширение обновилось.';
-      note('Обнови страницу, чтобы перевод снова заработал.');
-      v.retry.textContent = 'Обновить страницу';
+      v.bt.textContent = t('updated');
+      note(t('updatedNote'));
+      v.retry.textContent = t('reloadPage');
       v.retry.hidden = false;
       break;
   }
   v.bt.dispatchEvent(new Event('rb:content'));
 }
 
-/** Один запрос за раз: новый `run` отменяет прежний. Скелет не мигает на ответе из кэша, после паузы 429 повторяет сам. */
+/** One request at a time: a new `run` cancels the previous one. No skeleton flash on cached answers; retries by itself after a 429 pause. */
 export function createRunner(onState: (s: State) => void) {
   let stop = () => {};
   const run = (req: Req) => {
@@ -84,7 +85,7 @@ export function createRunner(onState: (s: State) => void) {
     };
     const go = () => {
       let queued = false;
-      // кэш отвечает за миллисекунды: скелет — только если ответа нет дольше 80 мс и запрос не в очереди
+      // the cache answers in milliseconds: show the skeleton only if there's no answer after 80 ms and the request isn't queued
       timer = setTimeout(() => alive && !queued && onState({ kind: 'loading' }), 80);
       const r = requestTranslation(req, () => {
         queued = true;
@@ -113,7 +114,7 @@ export function createRunner(onState: (s: State) => void) {
   return { run, stop: () => stop() };
 }
 
-/** `navigator.clipboard` нет на http-страницах — тогда execCommand через временное поле внутри `scope` (нашего shadow root). */
+/** `navigator.clipboard` is missing on http pages; then execCommand on a temporary field inside `scope` (our shadow root). */
 export async function copyText(text: string, scope: Node): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
@@ -140,11 +141,10 @@ export async function copyText(text: string, scope: Node): Promise<boolean> {
 
 const flashTimers = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
 
-/** Честный результат копирования на 1,4 с, потом кнопка возвращается. */
 export function flashCopy(btn: HTMLButtonElement, ok: boolean) {
   btn.classList.remove('is-done', 'is-fail');
   btn.classList.add(ok ? 'is-done' : 'is-fail');
-  btn.innerHTML = `${ok ? ICON.done : ICON.fail}<span class="lbl">${ok ? 'Скопировано' : 'Не скопировалось'}</span>`;
+  btn.innerHTML = `${ok ? ICON.done : ICON.fail}<span class="lbl">${t(ok ? 'copied' : 'copyFailed')}</span>`;
   clearTimeout(flashTimers.get(btn));
   flashTimers.set(
     btn,
@@ -155,7 +155,7 @@ export function flashCopy(btn: HTMLButtonElement, ok: boolean) {
   );
 }
 
-/** Свой ползунок для `sc` (системный спрятан классом `rb-scroll`); рисуется в positioned-родителе. */
+/** Custom scrollbar thumb for `sc` (the native one is hidden by `rb-scroll`), drawn in a positioned parent. */
 export function overlayScrollbar(sc: HTMLElement) {
   sc.classList.add('rb-scroll');
   const th = document.createElement('div');

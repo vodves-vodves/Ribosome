@@ -1,10 +1,11 @@
-// «Показать на странице»: прокрутка к исходному тексту закреплённого окна и подсветка наложением. DOM сайта не трогаем.
+// "Show on page": scroll to a pinned window's source text and highlight it with an overlay. The site's DOM is left alone.
+import { t } from '@/shared/i18n';
 import type { Bubble } from './bubble';
 import { anchorDead, anchorRect, clipUnder, headerRects, viewport, type Anchor } from './geometry';
 
 /**
- * Прямоугольники текстовых узлов Range. Range.getClientRects() у целиком выделенного абзаца
- * отдаёт ещё и рамку блока — получился бы двойной слой подсветки.
+ * Rects of the Range's text nodes. Range.getClientRects() on a fully selected paragraph
+ * also returns the block's box, which would double the highlight.
  */
 function rangeRects(range: Range): DOMRect[] {
   const out: DOMRect[] = [];
@@ -34,7 +35,7 @@ const anchorRects = (a: Anchor) => (a.range ? rangeRects(a.range) : [a.el!.getBo
 
 let flashOff: (() => void) | null = null;
 
-/** Голубая подсветка на 1,4 с. Едет с текстом, пока не растает; повторный вызов снимает прежнюю. */
+/** Blue highlight for 1.4 s. Follows the text until it fades; a new call removes the previous one. */
 function flash(layer: HTMLElement, a: Anchor) {
   flashOff?.();
   const els = anchorRects(a).map(() => {
@@ -50,7 +51,7 @@ function flash(layer: HTMLElement, a: Anchor) {
     const heads = headerRects(host);
     els.forEach((f, i) => {
       const r = rs[i];
-      // текст ушёл под шапку сайта — подсветка тоже
+      // the text went under the site's header, so does the highlight
       f.style.cssText = r ? `left:${r.left - 2}px;top:${r.top - 1}px;width:${r.width + 4}px;height:${r.height + 2}px;clip-path:${clipUnder(heads, r.left - 2, r.top - 1, r.width + 4) || 'none'}` : 'display:none';
     });
   };
@@ -62,7 +63,7 @@ function flash(layer: HTMLElement, a: Anchor) {
     });
   };
   sync();
-  // scroll не composed: контейнеры внутри shadow DOM страницы слушаем напрямую
+  // scroll isn't composed: listen to containers inside the page's shadow DOM directly
   const shadowClips = a.clips.filter((c) => c.getRootNode() !== document);
   addEventListener('scroll', onMove, { capture: true, passive: true });
   addEventListener('resize', onMove);
@@ -81,7 +82,7 @@ function flash(layer: HTMLElement, a: Anchor) {
 
 const up = (n: Node): Node | null => n.parentNode ?? ((n as ShadowRoot).host || null);
 
-/** Элемент в точке — часть фрагмента или его предок (а не липкая шапка сайта поверх). */
+/** The element at the point is part of the fragment or its ancestor (not a sticky site header on top). */
 function belongs(hit: Element, a: Anchor) {
   if (a.el) return a.el === hit || a.el.contains(hit);
   try {
@@ -91,7 +92,7 @@ function belongs(hit: Element, a: Anchor) {
   return false;
 }
 
-/** Предки с прокруткой, через границы shadow DOM. */
+/** Scrolling ancestors, across shadow DOM boundaries. */
 function scrollers(a: Anchor): Element[] {
   const out: Element[] = [];
   for (let n: Node | null = a.range ? a.range.commonAncestorContainer : a.el!.parentNode; n; n = up(n)) {
@@ -102,7 +103,7 @@ function scrollers(a: Anchor): Element[] {
   return out;
 }
 
-/** Видим, только если целиком в окне, не обрезан прокручиваемым предком и не накрыт чужим элементом. */
+/** Visible only when fully in the viewport, not clipped by a scrolling ancestor and not covered by another element. */
 function visible(a: Anchor, host: Element) {
   const r = anchorRect(a);
   const vp = viewport();
@@ -114,11 +115,11 @@ function visible(a: Anchor, host: Element) {
     if (r.left < left - 1 || r.top < top - 1 || r.right > left + c.clientWidth + 1 || r.bottom > top + c.clientHeight + 1) return false;
   }
   const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-  // наши закреплённые окна поверх текста не в счёт — они отъедут
+  // our pinned windows over the text don't count: they will move away
   return !!hit && (hit === host || belongs(hit, a));
 }
 
-/** Нижний край липкой шапки сайта и scroll-padding-top: туда фрагмент прятать нельзя. */
+/** Bottom of the site's sticky header or scroll-padding-top: the fragment must not end up behind it. */
 function topInset() {
   const vp = viewport();
   let inset = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
@@ -139,13 +140,13 @@ let locating: Bubble | null = null;
 let stopListening: (() => void) | null = null;
 
 /**
- * Перейти к тексту закреплённого окна `b`. Повторный клик того же окна во время перехода игнорируется,
- * другое окно — отменяет текущий переход. Колесо, клавиши, тач и нажатия вне нашего UI отменяют переход.
+ * Goes to the text of pinned window `b`. Another click on the same window during the trip is ignored,
+ * a click on another window cancels it. Wheel, keys, touch and presses outside our UI cancel it too.
  */
 export function locate(b: Bubble, layer: HTMLElement, host: Element, pinned: Iterable<Bubble>) {
   const a = b.anchor;
-  if (anchorDead(a)) return b.note('Текст на странице уже не найден — страница изменилась.');
-  if (!anchorRects(a).length) return b.note('Текст на странице сейчас скрыт.');
+  if (anchorDead(a)) return b.note(t('textGone'));
+  if (!anchorRects(a).length) return b.note(t('textHidden'));
   if (locating === b) return;
   stopListening?.();
   const my = ++tok;
@@ -160,12 +161,12 @@ export function locate(b: Bubble, layer: HTMLElement, host: Element, pinned: Ite
   };
   if (visible(a, host)) return done();
 
-  // 1) мгновенный scrollIntoView докручивает все вложенные контейнеры по обеим осям (smooth на вложенных в Chromium не работает)
+  // 1) an instant scrollIntoView scrolls every nested container on both axes (smooth doesn't work on nested ones in Chromium)
   const x0 = scrollX;
   const y0 = scrollY;
   const start = a.range ? a.range.startContainer : a.el!;
   (start instanceof Element ? start : start.parentElement)?.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
-  // scrollIntoView центрирует элемент целиком — во вложенных контейнерах доводим сам фрагмент, от внутреннего к внешнему
+  // scrollIntoView centers the whole element, so center the fragment itself in nested containers, innermost first
   for (const c of scrollers(a)) {
     const s = getComputedStyle(c);
     if (!/auto|scroll/.test(s.overflowX + s.overflowY)) continue;
@@ -176,7 +177,7 @@ export function locate(b: Bubble, layer: HTMLElement, host: Element, pinned: Ite
     const dy = r.height > c.clientHeight ? r.top - top - 8 : r.top + r.height / 2 - (top + c.clientHeight / 2);
     c.scrollBy({ top: dy, left: r.left + r.width / 2 - (left + c.clientWidth / 2), behavior: 'instant' });
   }
-  // 2) доводим сам фрагмент: по центру видимой под шапкой области, а выше 80 % экрана — началом к верху
+  // 2) center the fragment in the area under the header; if taller than 80% of it, align its start to the top
   const r0 = anchorRect(a);
   const vp = viewport();
   const inset = topInset();
@@ -187,7 +188,7 @@ export function locate(b: Bubble, layer: HTMLElement, host: Element, pinned: Ite
   const y1 = scrollY;
   if (matchMedia('(prefers-reduced-motion: reduce)').matches || (x1 === x0 && y1 === y0)) return done();
 
-  // 3) окно возвращаем и едем к цели плавно — всё в одном кадре, скачка не видно
+  // 3) restore the scroll position and glide to the target: all in one frame, so the jump is never seen
   scrollTo({ left: x0, top: y0, behavior: 'instant' });
   scrollTo({ left: x1, top: y1, behavior: 'smooth' });
 
@@ -201,7 +202,7 @@ export function locate(b: Bubble, layer: HTMLElement, host: Element, pinned: Ite
     if (my === tok) {
       tok++;
       locating = null;
-      // плавная прокрутка браузера сама не останавливается — замираем там, где перехватили
+      // the browser's smooth scroll doesn't stop on its own: freeze where we were interrupted
       scrollTo({ left: scrollX, top: scrollY, behavior: 'instant' });
     }
     off();
@@ -209,7 +210,7 @@ export function locate(b: Bubble, layer: HTMLElement, host: Element, pinned: Ite
   EV.forEach((t) => addEventListener(t, interrupt, { capture: true, passive: true }));
   stopListening = off;
 
-  // «приехали» — позиция не меняется 3 кадра подряд и равна цели; scrollend стреляет раньше и с вложенных контейнеров
+  // arrived: position unchanged for 3 frames and equal to the target; scrollend fires too early and from nested containers
   let last = '';
   let still = 0;
   const t0 = performance.now();
@@ -220,7 +221,7 @@ export function locate(b: Bubble, layer: HTMLElement, host: Element, pinned: Ite
     last = now;
     const arrived = Math.abs(scrollX - x1) <= 1 && Math.abs(scrollY - y1) <= 1;
     if ((still >= 3 && arrived) || still >= 12 || performance.now() - t0 > 2500) {
-      if (!arrived) scrollTo({ left: x1, top: y1, behavior: 'instant' }); // Chromium бросил smooth — доезжаем сами
+      if (!arrived) scrollTo({ left: x1, top: y1, behavior: 'instant' }); // Chromium dropped the smooth scroll, finish it ourselves
       off();
       return done();
     }

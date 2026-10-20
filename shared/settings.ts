@@ -1,11 +1,12 @@
 import { browser } from 'wxt/browser';
+import { LANGS } from './langs';
 
 export type Mode = 'icon' | 'instant';
 export type Theme = 'auto' | 'light' | 'dark';
 
 export type Settings = {
   target: string;
-  /** Язык, на который переводим текст, уже написанный на `target`. Никогда не равен `target`. */
+  /** Language for text that is already in `target`. Never equal to `target`. */
   secondary: string;
   source: string;
   mode: Mode;
@@ -14,26 +15,27 @@ export type Settings = {
   theme: Theme;
 };
 
-export const DEFAULTS: Settings = {
-  target: 'ru',
-  secondary: 'en',
-  source: 'auto',
-  mode: 'icon',
-  translateInFields: true,
-  provider: 'google',
-  theme: 'auto',
-};
+const secondFor = (target: string) => (target === 'en' ? 'es' : 'en');
+
+/** UI languages that Chrome names differently from our list. */
+const UI_ALIASES: Record<string, string> = { nb: 'no', nn: 'no', 'zh-HK': 'zh-TW', 'zh-MO': 'zh-TW' };
+
+function defaults(): Settings {
+  const ui = browser.i18n.getUILanguage();
+  const target = [UI_ALIASES[ui], ui, ui.split('-')[0]!].find((l) => l && LANGS.includes(l)) ?? 'en';
+  return { target, secondary: secondFor(target), source: 'auto', mode: 'icon', translateInFields: true, provider: 'google', theme: 'auto' };
+}
 
 const KEY = 'settings';
 
-/** Повреждённое сохранённое значение (`secondary === target`) чиним, а не тащим дальше. */
+/** A corrupted stored value (`secondary === target`) is fixed rather than carried along. */
 export function normalize(raw?: Partial<Settings>): Settings {
-  const s = { ...DEFAULTS, ...raw };
-  if (s.secondary === s.target) s.secondary = s.target === 'en' ? 'ru' : 'en';
+  const s = { ...defaults(), ...raw };
+  if (s.secondary === s.target) s.secondary = secondFor(s.target);
   return s;
 }
 
-/** Совпадение «переводить на» и «второго языка» разрешается обменом. */
+/** "Translate to" colliding with the second language is resolved by swapping them. */
 export function merge(prev: Settings, patch: Partial<Settings>): Settings {
   const next = { ...prev, ...patch };
   if (next.secondary === next.target) {
@@ -64,7 +66,6 @@ export function watchSettings(cb: (s: Settings) => void): () => void {
 
 const dark = () => matchMedia('(prefers-color-scheme: dark)');
 
-/** Ставит `data-theme` на корень UI и следит за системной темой, пока выбрано «Авто». */
 export function applyTheme(el: HTMLElement, theme: Theme) {
   el.dataset.theme = theme === 'auto' ? (dark().matches ? 'dark' : 'light') : theme;
 }

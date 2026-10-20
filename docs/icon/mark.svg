@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- Ribosome: две субъединицы (широкие, плоские — не «голова и туловище») и нить «точки → тире». Векторная версия для 48/128 и UI. -->
+  <!-- Ribosome: two wide, flat subunits and a dots-to-dashes strand. Vector version for 48/128 px and the UI. -->
   <defs>
     <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#5AC8FA"/>
@@ -18,22 +18,22 @@
 
   <rect width="1024" height="1024" rx="230" fill="url(#tile)"/>
 
-  <!-- мягкая тень под субъединицами -->
+  <!-- soft shadow under the subunits -->
   <g filter="url(#soft)" opacity="0.25" fill="#0040A0">
     <ellipse cx="520" cy="720" rx="300" ry="150"/>
     <ellipse cx="516" cy="430" rx="230" ry="120"/>
   </g>
 
-  <!-- малая (верхняя) субъединица: широкий купол с выемкой снизу под нить -->
+  <!-- small (top) subunit: a wide dome with a notch for the strand -->
   <path fill="url(#lobe)" d="M512 290c140 0 240 60 240 140 0 48-40 78-96 92-44 10-86 16-144 16s-100-6-144-16c-56-14-96-44-96-92 0-80 100-140 240-140Z"/>
-  <!-- большая (нижняя) субъединица: широкая «фасолина» -->
+  <!-- large (bottom) subunit: a wide bean -->
   <path fill="url(#lobe)" d="M512 560c190 0 310 60 310 150 0 86-120 134-310 134S202 796 202 710c0-90 120-150 310-150Z"/>
 
-  <!-- блики -->
+  <!-- highlights -->
   <ellipse cx="470" cy="330" rx="110" ry="30" fill="url(#shine)" opacity="0.8"/>
   <ellipse cx="440" cy="605" rx="140" ry="34" fill="url(#shine)" opacity="0.7"/>
 
-  <!-- нить: точки → изгиб в щели между субъединицами → тире -->
+  <!-- strand: dots, a bend through the gap between the subunits, dashes -->
   <g fill="#FFFFFF">
     <circle cx="112" cy="540" r="11"/><circle cx="160" cy="540" r="11"/><circle cx="208" cy="540" r="11"/><circle cx="256" cy="540" r="11"/>
   </g>

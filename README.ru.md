@@ -1,0 +1,156 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/readme/hero-dark.png">
+    <img src="docs/readme/hero-light.png" alt="Ribosome: окно перевода поверх немецкой статьи">
+  </picture>
+</p>
+
+<p align="center">
+  <strong>Перевод выделенного текста прямо на странице.</strong><br>
+  Расширение для Chrome и Edge. Бесплатно, без ключа API.
+</p>
+
+<p align="center">
+  <a href="https://github.com/vodves-vodves/Ribosome/releases/latest"><img src="https://img.shields.io/github/v/release/vodves-vodves/Ribosome?style=flat&colorA=222222&colorB=007AFF&label=release" alt="Последний релиз"></a>
+  <a href="https://github.com/vodves-vodves/Ribosome/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/vodves-vodves/Ribosome/ci.yml?branch=main&style=flat&colorA=222222&label=CI" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/vodves-vodves/Ribosome?style=flat&colorA=222222&colorB=5AC8FA" alt="Лицензия"></a>
+  <img src="https://img.shields.io/badge/Chrome%20%C2%B7%20Edge-135%2B-34C759?style=flat&colorA=222222&logo=googlechrome&logoColor=white" alt="Chrome и Edge 135+">
+  <img src="https://img.shields.io/badge/Manifest-V3-5856D6?style=flat&colorA=222222" alt="Manifest V3">
+  <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat&colorA=222222&logo=typescript&logoColor=white" alt="TypeScript"></a>
+  <a href="https://wxt.dev"><img src="https://img.shields.io/badge/built%20with-WXT-67D55E?style=flat&colorA=222222" alt="Собрано на WXT"></a>
+</p>
+
+<p align="center">
+  <a href="README.md">English</a> · <b>Русский</b>
+</p>
+
+Выделите фразу на любом сайте, и её перевод появится в маленьком стеклянном окне прямо рядом с ней. Без новой вкладки и без копирования. Нужные окна можно закрепить, к их исходному тексту можно вернуться одним кликом, а всё остальное перевести во всплывающем окне на панели браузера.
+
+**41** язык · **0** ключей API · **0** зависимостей в рантайме · **~50 КБ** на странице.
+
+## Установка
+
+**Из релиза**
+
+1. Скачайте `ribosome-<версия>-chrome.zip` из [последнего релиза](https://github.com/vodves-vodves/Ribosome/releases/latest) и распакуйте.
+2. Откройте `chrome://extensions` (в Edge: `edge://extensions`) и включите **Режим разработчика**.
+3. Нажмите **Загрузить распакованное расширение** и выберите распакованную папку.
+
+Нужен Chrome или Edge версии 135 и новее. Распакованное расширение само не обновляется: новый релиз ставится так же.
+
+**Из исходников**
+
+```sh
+git clone https://github.com/vodves-vodves/Ribosome.git
+cd Ribosome
+npm ci
+npm run build
+```
+
+Затем загрузите папку `.output/chrome-mv3` тем же способом.
+
+## Что умеет
+
+### 01 · Выделил — перевёл
+
+Выделите текст, и там, где вы отпустили мышь, появится маленькая иконка. Кликните по ней, и перевод откроется прямо рядом с текстом. При прокрутке окно едет вместе с текстом и не перескакивает с одной стороны на другую. Лишний клик не нужен? Переключите срабатывание на **Сразу после выделения**, и окно появится через 0,3 с после выделения.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/readme/select-dark.gif">
+    <img src="docs/readme/select-light.gif" alt="Выделение немецкой фразы, клик по иконке и английский перевод">
+  </picture>
+</p>
+
+### 02 · Закрепить и найти снова
+
+Закреплённое окно остаётся на экране, пока вы читаете дальше. Его можно таскать за шапку, а закреплённых окон может быть сколько угодно. Каждое помнит, откуда взят текст: кликните по строке-источнику, и страница плавно вернётся к нему и подсветит его.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/readme/pin-dark.gif">
+    <img src="docs/readme/pin-light.gif" alt="Закрепление окна, прокрутка и возврат к подсвеченному исходному тексту">
+  </picture>
+</p>
+
+### 03 · Второй язык для текста, который вы и так понимаете
+
+Если выделенный текст уже на вашем языке, Ribosome переводит его на второй язык, а не возвращает тот же текст. Переводите на русский и выделили русскую фразу? Получите английский или любой другой язык на выбор.
+
+### 04 · Всплывающее окно
+
+Впишите или вставьте любой текст, чтобы перевести его, а языки меняются местами одним кликом. Настройки сохраняются сразу и переезжают вместе с профилем браузера.
+
+<table>
+  <tr>
+    <td valign="top">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/readme/popup-translate-dark.png">
+        <img src="docs/readme/popup-translate-light.png" width="360" alt="Всплывающее окно, вкладка «Перевод»">
+      </picture>
+    </td>
+    <td valign="top">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/readme/popup-settings-dark.png">
+        <img src="docs/readme/popup-settings-light.png" width="360" alt="Всплывающее окно, вкладка «Настройки»">
+      </picture>
+    </td>
+  </tr>
+</table>
+
+### 05 · Уживается с любой страницей
+
+- Живёт в закрытом Shadow DOM в top layer браузера: стили сайта его не ломают, а элементы сайта он не трогает. Даже подсветка — это наложение поверх страницы.
+- Работает в полях ввода и текстовых областях (можно выключить), внутри открытых shadow root и не теряется, когда одностраничное приложение меняет маршрут.
+- Следует светлой или тёмной теме системы либо той, что вы выбрали.
+- Говорит по-английски и по-русски, в зависимости от языка браузера.
+
+### 06 · Бережно к Google
+
+Все запросы проходят через одно место в фоне, и бесплатный сервис не перегружается:
+
+- до 500 последних переводов хранятся в кэше, пока браузер открыт;
+- одинаковые запросы склеиваются, а запрос отменяется, как только закрыли его окно;
+- не чаще одного запроса в 250 мс и не больше 20 за 10 с; лишние ждут в очереди, ни один не теряется;
+- после ответа 429 пауза 2, 4, 8… до 60 с с обратным отсчётом, потом повтор сам;
+- выделение длиннее 5000 символов обрезается, и окно об этом пишет.
+
+## Приватность
+
+- Ribosome обращается к одному серверу, `translate.googleapis.com`, и отправляет туда только текст, который вы попросили перевести.
+- Никаких аккаунтов, аналитики и слежки. Настройки лежат в `chrome.storage.sync`, последние переводы — в `chrome.storage.session`, он очищается при закрытии браузера.
+- Разрешения: `storage` и доступ к `translate.googleapis.com`. Content script запускается на всех страницах, чтобы замечать выделение.
+
+> [!NOTE]
+> Ribosome пользуется бесплатным неофициальным адресом Google Translate. Ключ не нужен, но Google может в любой момент ограничить его или изменить.
+
+## Разработка
+
+```sh
+npm run dev       # Chrome с расширением и горячей перезагрузкой
+npm test          # unit-тесты (Vitest)
+npm run e2e       # сборка и end-to-end тесты в headless Chromium (Playwright)
+npm run compile   # проверка типов
+```
+
+Перед первым `npm run e2e` выполните `npx playwright install chromium`.
+
+| Путь | Что там |
+| --- | --- |
+| `entrypoints/background.ts` | единственный выход в сеть: переводчик с кэшем, очередью и паузами |
+| `entrypoints/content/` | выделение, иконка, окна перевода, «Показать на странице» |
+| `entrypoints/popup/` | вкладки «Перевод» и «Настройки» |
+| `shared/` | переводчик, провайдер Google, настройки, локали, общий UI |
+| `e2e/` | тесты Playwright с подставным Google |
+
+В dev-сборке маркер в выделенном тексте имитирует сбой: `[[429]]`, `[[429once]]`, `[[5xx]]`, `[[offline]]`, `[[slow]]`.
+
+Релиз: поднимите `version` в `package.json` и запушьте тег `v<версия>` — CI соберёт zip в черновик релиза.
+
+## Лицензия
+
+[MIT](LICENSE)
+
+---
+
+<p align="center"><i>Рибосома переводит матричную РНК в белок. Эта переводит текст.</i></p>

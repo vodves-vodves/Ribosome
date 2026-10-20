@@ -3,8 +3,8 @@ import { ProviderError, type Provider } from './types';
 const seen = new Set<string>();
 
 /**
- * Заглушка dev-сборки: маркер в выделенном тексте воспроизводит состояние окна.
- * `[[429]]` — всегда 429, `[[429once]]` — 429 один раз, `[[5xx]]` — 503, `[[offline]]` — сбой сети, `[[slow]]` — ответ через 3 с.
+ * Dev build stub: a marker in the selected text reproduces a window state.
+ * `[[429]]` always 429, `[[429once]]` 429 once, `[[5xx]]` 503, `[[offline]]` network failure, `[[slow]]` answer after 3 s.
  */
 export function withStub(p: Provider): Provider {
   return {

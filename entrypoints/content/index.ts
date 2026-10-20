@@ -1,5 +1,6 @@
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { createShadowRootUi } from 'wxt/utils/content-script-ui/shadow-root';
+import { t } from '@/shared/i18n';
 import base from '@/shared/ui/base.css?inline';
 import { ICON } from '@/shared/ui/icons';
 import { applyTheme, loadSettings, watchSettings, watchSystemTheme, type Settings } from '@/shared/settings';
@@ -12,7 +13,7 @@ import { capture, eventRoots, focusRect, focusRoots, onScrollbar, sameRange, typ
 export default defineContentScript({
   matches: ['<all_urls>'],
   runAt: 'document_idle',
-  // старый экземпляр после обновления расширения снимается событием на document, без postMessage в страницу
+  // after an extension update the old instance is shut down by an event on document, without postMessage into the page
   noScriptStartedPostMessage: true,
   async main(ctx) {
     const ui = await createShadowRootUi(ctx, {
@@ -32,14 +33,14 @@ export default defineContentScript({
 });
 
 /**
- * Хост — в top layer: не зависим от z-index сайта и от transform/filter на body.
- * `:host { all: initial !important }` от WXT перебивает любые стили страницы на хосте.
- * Повторный вызов поднимает нас над окнами, которые сайт вывел в top layer позже.
+ * The host lives in the top layer, independent of the site's z-index and of transform/filter on body.
+ * WXT's `:host { all: initial !important }` beats any page styles on the host.
+ * Calling it again lifts us above windows the site put into the top layer later.
  */
 function lift(host: HTMLElement) {
   if (!host.hasAttribute('popover')) {
     host.setAttribute('popover', 'manual');
-    // ::backdrop хоста стилизуется только из документа; глобальный `::backdrop { background }` сайта затемнил бы страницу
+    // the host's ::backdrop can only be styled from the document; a site's global `::backdrop { background }` would dim the page
     const s = document.createElement('style');
     s.textContent = `${host.localName}::backdrop{display:none!important}`;
     (document.head ?? document.documentElement).append(s);
@@ -50,7 +51,7 @@ function lift(host: HTMLElement) {
 
 function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal: AbortSignal) {
   let settings: Settings | null = null;
-  // первое выделение ждёт настроек, а не работает с дефолтами
+  // the first selection waits for settings instead of running with defaults
   const ready = loadSettings().then((s) => (settings = s));
   const theme = () => settings && applyTheme(root, settings.theme);
   ready.then(theme);
@@ -62,15 +63,15 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
 
   const trigger = document.createElement('button');
   trigger.className = 'rb-trigger rb-surface';
-  trigger.setAttribute('aria-label', 'Перевести');
-  trigger.title = 'Перевести';
+  trigger.setAttribute('aria-label', t('translate'));
+  trigger.title = t('translate');
   trigger.innerHTML = ICON.translate;
   root.append(trigger);
 
-  /** Обычное окно: одно, привязано к тексту. Закреплённых может быть несколько, живут до перезагрузки страницы. */
+  /** The regular window: one, tied to the text. Pinned windows can be many and live until the page reloads. */
   let active: Bubble | null = null;
   const pinned = new Set<Bubble>();
-  /** Выделение, ждущее клика по иконке или таймера режима «сразу». */
+  /** Selection waiting for an icon click or the instant-mode timer. */
   let cur: Capture | null = null;
   let trigSide: Side | undefined;
   let instantT: ReturnType<typeof setTimeout> | undefined;
@@ -86,7 +87,7 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
     watchShadowScroll();
   }
 
-  // scroll не composed: прокрутку контейнеров внутри shadow DOM страницы слушатель на window не видит
+  // scroll isn't composed: a listener on window misses scrolling containers inside the page's shadow DOM
   let shadowScroll = new AbortController();
   function watchShadowScroll() {
     shadowScroll.abort();
@@ -151,7 +152,7 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
     trigger.style.clipPath = p.clip;
   }
 
-  /** Клик в пустое место, Esc: закрыть иконку и обычное окно. Закреплённые остаются. */
+  /** Click on empty space or Esc: close the icon and the regular window. Pinned windows stay. */
   function dismiss() {
     clearTimeout(instantT);
     hideTrigger();
@@ -161,41 +162,43 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
 
   async function handle(clicks: number, roots: ShadowRoot[], down = downSeq) {
     await ready;
-    // пока ждали, мышь нажали снова (двойной, тройной клик) — решать будет следующее отпускание
+    // the mouse went down again while we waited (double, triple click): the next release decides
     if (down !== downSeq) return;
     const s = settings!;
     const c = capture(roots, s.translateInFields);
     if (!c) {
-      // выделение снято (в том числе с клавиатуры): то же выделение потом снова должно сработать
+      // selection cleared (keyboard included): the same selection must trigger again later
       clearTimeout(instantT);
       cur = null;
       return hideTrigger();
     }
     if (c.anchor.range?.intersectsNode(host)) return;
-    // то же выделение, что уже открыто или ждёт (клик по скроллбару, selectionchange после mouseup) — не повторяем
+    // same selection as the open or pending one (scrollbar click, selectionchange after mouseup): don't repeat
     if (c.anchor.range && (sameRange(c.anchor.range, active?.anchor.range) || sameRange(c.anchor.range, cur?.anchor.range))) return;
     if (c.anchor.el && (c.anchor.el === active?.anchor.el || c.anchor.el === cur?.anchor.el) && c.text === (active?.req.text ?? cur?.text)) return;
     if (s.mode === 'icon') return showTrigger(c);
     cur = c;
     clearTimeout(instantT);
-    // после двойного клика ждём интервал мультиклика Windows, иначе тройной клик даст два запроса
+    // after a double click wait out the Windows multi-click interval, otherwise a triple click makes two requests
     instantT = setTimeout(() => open(c), clicks >= 2 ? 500 : 300);
   }
 
   trigger.addEventListener('click', () => cur && open(cur));
+  // SmoothScroll and the like catch wheel on window and scroll the page: to them our closed shadow root is one element with nothing to scroll
+  root.addEventListener('wheel', (e) => e.stopPropagation(), { passive: true });
 
-  // capture на window: редакторы и drag-библиотеки гасят события на всплытии
+  // capture on window: editors and drag libraries swallow events while bubbling
   const opts = { capture: true, signal };
   let skipUp = false;
   let downSeq = 0;
-  /** Чем сделано выделение. Мышиное обрабатывает mouseup, остальное (клавиатура, долгий тап) — selectionchange. */
+  /** What made the selection. Mouse selections are handled on mouseup, the rest (keyboard, long tap) on selectionchange. */
   let lastInput = '';
   addEventListener('pointerdown', (e) => (lastInput = e.pointerType), opts);
   addEventListener(
     'mousedown',
     (e) => {
       downSeq++;
-      // решает место нажатия, а не отпускания: выделение, начатое в нашем окне, не переводим
+      // the press position decides, not the release: a selection started in our window isn't translated
       skipUp = e.button !== 0 || e.composedPath().includes(host) || onScrollbar(e);
       if (skipUp) return;
       dismiss();
@@ -203,7 +206,7 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
     },
     opts,
   );
-  // после нативного drag-and-drop (ссылка, картинка, выделенный текст) mouseup не приходит
+  // after native drag-and-drop (link, image, selected text) mouseup never comes
   const endPassive = () => root.classList.remove('is-passive');
   addEventListener('dragstart', endPassive, opts);
   addEventListener('pointercancel', endPassive, opts);
@@ -219,7 +222,7 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
     },
     opts,
   );
-  // выделение с клавиатуры и долгий тап не дают mouseup
+  // keyboard selection and long tap don't fire mouseup
   let selT: ReturnType<typeof setTimeout> | undefined;
   document.addEventListener(
     'selectionchange',
@@ -233,13 +236,13 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
     'keydown',
     (e) => {
       lastInput = 'key';
-      // Esc в открытом списке закрывает только список
+      // Esc in an open dropdown closes only the dropdown
       if (e.key === 'Escape' && !(e.composedPath()[0] as Element).closest?.('select')) dismiss();
     },
     opts,
   );
 
-  // окно и иконка едут с текстом; один проход чтения и один записи на кадр
+  // the window and icon move with the text: one read pass and one write pass per frame
   let raf = 0;
   const frame = () => {
     raf = 0;
@@ -252,11 +255,11 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
   const schedule = () => {
     raf ||= requestAnimationFrame(frame);
   };
-  // SPA сменил маршрут: текст закреплённых окон мог исчезнуть — помечаем сразу, а не по клику на прицел
+  // an SPA changed route: pinned windows' text may be gone, so flag it now rather than on the next locate click
   const checkRoute = () =>
     setTimeout(() => {
       if (active && anchorDead(active.anchor)) active.close();
-      pinned.forEach((b) => anchorDead(b.anchor) && b.note('Текст на странице уже не найден — страница изменилась.'));
+      pinned.forEach((b) => anchorDead(b.anchor) && b.note(t('textGone')));
     }, 1000);
   (globalThis as { navigation?: EventTarget }).navigation?.addEventListener('navigatesuccess', checkRoute, { signal });
   addEventListener('popstate', checkRoute, { signal });

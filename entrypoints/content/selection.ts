@@ -1,11 +1,11 @@
 import { fieldAnchor, rangeAnchor, type Anchor } from './geometry';
 
-/** Выделение, которое можно перевести. `focus` — точка, где отпустили мышь: там встаёт иконка. */
+/** A selection that can be translated. `focus` is where the mouse was released: the icon goes there. */
 export type Capture = { text: string; anchor: Anchor; focus: Range | null; back: boolean };
 
-/** Нажатие по системной полосе прокрутки — не «клик в пустое место». */
+/** A press on a native scrollbar is not a click on empty space. */
 export function onScrollbar(e: MouseEvent) {
-  // настоящий target: на window событие из shadow DOM страницы уже перенацелено на host
+  // the real target: on window an event from the page's shadow DOM is already retargeted to the host
   const t = e.composedPath()[0];
   const de = document.documentElement;
   if (t === de || t === document.body) {
@@ -13,11 +13,11 @@ export function onScrollbar(e: MouseEvent) {
     return e.clientX >= de.clientWidth || e.clientY >= de.clientHeight || rtlBar;
   }
   if (!(t instanceof Element) || !t.clientWidth) return false;
-  // offsetX тоже считается от перенацеленного target — меряем от самого элемента
+  // offsetX is relative to the retargeted target too, so measure from the element itself
   const r = t.getBoundingClientRect();
   const x = e.clientX - r.left - t.clientLeft;
   const y = e.clientY - r.top - t.clientTop;
-  // у RTL-элемента полоса слева от padding box — x отрицательный
+  // an RTL element has its scrollbar left of the padding box: x is negative
   return x >= t.clientWidth || y >= t.clientHeight || x < 0;
 }
 
@@ -25,11 +25,11 @@ export function sameRange(a: Range, b: Range | null | undefined) {
   try {
     return !!b && !b.collapsed && a.compareBoundaryPoints(Range.START_TO_START, b) === 0 && a.compareBoundaryPoints(Range.END_TO_END, b) === 0;
   } catch {
-    return false; // Range из разных деревьев (shadow DOM страницы) — точно не одно выделение
+    return false; // Ranges from different trees (the page's shadow DOM) can't be the same selection
   }
 }
 
-/** Открытые shadow root, через которые прошло событие: без них getComposedRanges отдаст Range на host. */
+/** Open shadow roots the event passed through: without them getComposedRanges returns a Range on the host. */
 export const eventRoots = (e: Event) => e.composedPath().filter((n): n is ShadowRoot => n instanceof ShadowRoot);
 
 export function focusRoots() {
@@ -62,7 +62,6 @@ function selectionRange(sel: ComposedSelection, roots: ShadowRoot[]): Range | nu
 
 type Field = HTMLInputElement | HTMLTextAreaElement;
 
-/** Поле ввода в фокусе (с заходом в shadow DOM). */
 function activeField(): Field | null {
   let a = document.activeElement;
   while (a?.shadowRoot?.activeElement) a = a.shadowRoot.activeElement;
@@ -74,11 +73,11 @@ const editable = (r: Range) => {
   return !!(n instanceof HTMLElement ? n : n.parentElement)?.isContentEditable;
 };
 
-/** Текущее выделение страницы или null. Поля и contenteditable — только при включённой настройке. */
+/** The page's current selection or null. Fields and contenteditable only when the setting is on. */
 export function capture(roots: ShadowRoot[], inFields: boolean): Capture | null {
   const field = activeField();
   if (field) {
-    // Range у поля схлопнут, текст — из selectionStart/End. Пароли, email и прочие поля без selection API не трогаем
+    // a field's Range is collapsed, the text comes from selectionStart/End. Passwords, email and other fields without the selection API are skipped
     const plain = field instanceof HTMLTextAreaElement || /^(text|search|url|tel)$/.test(field.type);
     if (!inFields || !plain || field.selectionStart === field.selectionEnd) return null;
     const text = field.value.slice(field.selectionStart ?? 0, field.selectionEnd ?? 0).trim();
@@ -90,20 +89,20 @@ export function capture(roots: ShadowRoot[], inFields: boolean): Capture | null 
   const text = (sel.toString() || range.toString()).trim();
   if (!text) return null;
 
-  // точка отпускания мыши = focus выделения: для выделения снизу вверх это начало Range
+  // the mouse release point is the selection focus: for a bottom-up selection that's the Range start
   const a = sel.anchorNode;
   const f = sel.focusNode;
   const back = !!a && !!f && (a === f ? sel.focusOffset < sel.anchorOffset : !!(a.compareDocumentPosition(f) & Node.DOCUMENT_POSITION_PRECEDING));
   const focus = range.cloneRange();
   focus.collapse(back);
-  // тройной клик ставит focus в начало следующего абзаца — тогда иконка у края самого выделения
+  // a triple click puts focus at the start of the next paragraph; then the icon goes to the edge of the selection itself
   const fr = focus.getClientRects()[0];
   const mid = fr && fr.top + fr.height / 2;
   const inside = fr && [...range.getClientRects()].some((x) => mid! >= x.top - 1 && mid! <= x.bottom + 1);
   return { text, anchor: rangeAnchor(range), focus: inside ? focus : null, back };
 }
 
-/** Где стоит иконка: у точки отпускания, у края выделения или у поля. */
+/** Where the icon goes: the release point, the selection's edge or the field. */
 export function focusRect(c: Capture): DOMRect | null {
   if (c.anchor.el) return c.anchor.el.getBoundingClientRect();
   const f = c.focus?.getClientRects()[0];

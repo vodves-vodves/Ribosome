@@ -1,3 +1,5 @@
+import { t } from '../i18n';
+
 const svg = (box: number, attrs: string, body: string) =>
   `<svg viewBox="0 0 ${box} ${box}" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" ${attrs}>${body}</svg>`;
 
@@ -14,4 +16,4 @@ export const ICON = {
   swap: svg(16, 'stroke-width="1.6"', '<path d="M2.5 5.5h10l-2.5-2.5M13.5 10.5h-10L6 13"/>'),
 };
 
-export const COPY_LABEL = `${ICON.copy}<span class="lbl">Копировать</span>`;
+export const COPY_LABEL = `${ICON.copy}<span class="lbl">${t('copy')}</span>`;

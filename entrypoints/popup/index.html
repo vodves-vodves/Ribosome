@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,24 +12,24 @@
       <span class="name">Ribosome</span>
     </header>
     <div class="rb-seg" id="tabs">
-      <button class="is-on" data-tab="tr">Перевод</button>
-      <button data-tab="set">Настройки</button>
+      <button class="is-on" data-tab="tr" data-i18n="tabTranslate"></button>
+      <button data-tab="set" data-i18n="tabSettings"></button>
     </div>
 
     <section class="rb-tab is-on" data-tab="tr">
       <div class="rb-langs">
-        <label class="rb-pill"><select id="tr-from" aria-label="Откуда"></select><i data-icon="down"></i></label>
-        <button class="rb-swap" id="tr-swap" aria-label="Поменять языки" title="Поменять языки"><i data-icon="swap"></i></button>
-        <label class="rb-pill"><select id="tr-to" aria-label="Куда"></select><i data-icon="down"></i></label>
+        <label class="rb-pill"><select id="tr-from" data-i18n-label="from"></select><i data-icon="down"></i></label>
+        <button class="rb-swap" id="tr-swap" data-i18n-title="swap"><i data-icon="swap"></i></button>
+        <label class="rb-pill"><select id="tr-to" data-i18n-label="to"></select><i data-icon="down"></i></label>
       </div>
-      <div class="rb-tawrap"><textarea class="rb-ta" id="tr-in" placeholder="Введите текст…" rows="4"></textarea></div>
+      <div class="rb-tawrap"><textarea class="rb-ta" id="tr-in" rows="4"></textarea></div>
       <div class="rb-cnt" id="tr-cnt">0 / 5000</div>
       <div class="rb-res">
         <div class="lab" id="tr-lab"></div>
-        <div class="rb-bt is-empty" id="tr-out" dir="auto">Перевод появится здесь</div>
+        <div class="rb-bt is-empty" id="tr-out" dir="auto" data-i18n="outputPlaceholder"></div>
         <div class="rb-note" id="tr-note" hidden></div>
         <div class="bar">
-          <button class="rb-btn" id="tr-retry" hidden>Повторить</button>
+          <button class="rb-btn" id="tr-retry" hidden data-i18n="retry"></button>
           <button class="rb-btn rb-copy" id="tr-copy" hidden></button>
         </div>
       </div>
@@ -38,43 +38,43 @@
     <section class="rb-tab" data-tab="set">
       <div class="rb-set">
         <div class="rb-grp">
-          <h4>Языки</h4>
+          <h4 data-i18n="languages"></h4>
           <div class="box">
-            <label class="rb-row"><span>Переводить на</span><span class="val"><select data-set="target"></select><i data-icon="right"></i></span></label>
-            <label class="rb-row"><span>Второй язык</span><span class="val"><select data-set="secondary"></select><i data-icon="right"></i></span></label>
-            <label class="rb-row"><span>Язык источника</span><span class="val"><select data-set="source"></select><i data-icon="right"></i></span></label>
+            <label class="rb-row"><span data-i18n="targetLang"></span><span class="val"><select data-set="target"></select><i data-icon="right"></i></span></label>
+            <label class="rb-row"><span data-i18n="secondaryLang"></span><span class="val"><select data-set="secondary"></select><i data-icon="right"></i></span></label>
+            <label class="rb-row"><span data-i18n="sourceLang"></span><span class="val"><select data-set="source"></select><i data-icon="right"></i></span></label>
           </div>
-          <p class="note">Если выделенный текст уже на языке перевода, он переводится на второй язык.</p>
+          <p class="note" data-i18n="secondaryNote"></p>
         </div>
 
         <div class="rb-grp">
-          <h4>Срабатывание</h4>
-          <div class="box" id="set-mode" role="radiogroup" aria-label="Срабатывание">
-            <button class="rb-row is-pick" data-mode="icon" role="radio"><span>Иконка у выделения</span><i class="ck" data-icon="done"></i></button>
-            <button class="rb-row is-pick" data-mode="instant" role="radio"><span>Сразу после выделения</span><i class="ck" data-icon="done"></i></button>
+          <h4 data-i18n="trigger"></h4>
+          <div class="box" id="set-mode" role="radiogroup" data-i18n-label="trigger">
+            <button class="rb-row is-pick" data-mode="icon" role="radio"><span data-i18n="modeIcon"></span><i class="ck" data-icon="done"></i></button>
+            <button class="rb-row is-pick" data-mode="instant" role="radio"><span data-i18n="modeInstant"></span><i class="ck" data-icon="done"></i></button>
           </div>
-          <p class="note">В режиме «сразу» окно появляется через 0,3 с после выделения.</p>
+          <p class="note" data-i18n="instantNote"></p>
           <div class="box">
-            <label class="rb-row"><span>Переводить в полях ввода</span><input type="checkbox" class="rb-switch" role="switch" id="set-fields"></label>
+            <label class="rb-row"><span data-i18n="inFields"></span><input type="checkbox" class="rb-switch" role="switch" id="set-fields"></label>
           </div>
         </div>
 
         <div class="rb-grp">
-          <h4>Поставщик</h4>
+          <h4 data-i18n="provider"></h4>
           <div class="box">
-            <label class="rb-row"><span>Сервис</span><span class="val"><select data-set="provider"><option value="google">Google Translate</option></select><i data-icon="right"></i></span></label>
+            <label class="rb-row"><span data-i18n="service"></span><span class="val"><select data-set="provider"><option value="google">Google Translate</option></select><i data-icon="right"></i></span></label>
           </div>
-          <p class="note">Бесплатно, без ключа. DeepL и другие — позже.</p>
+          <p class="note" data-i18n="providerNote"></p>
         </div>
 
         <div class="rb-grp">
-          <h4>Внешний вид</h4>
+          <h4 data-i18n="appearance"></h4>
           <div class="box">
-            <div class="rb-row"><span>Тема</span>
+            <div class="rb-row"><span data-i18n="theme"></span>
               <div class="rb-seg sm" id="set-theme">
-                <button data-theme="auto">Авто</button>
-                <button data-theme="light">Светлая</button>
-                <button data-theme="dark">Тёмная</button>
+                <button data-theme="auto" data-i18n="auto"></button>
+                <button data-theme="light" data-i18n="light"></button>
+                <button data-theme="dark" data-i18n="dark"></button>
               </div>
             </div>
           </div>

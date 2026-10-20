@@ -1,12 +1,12 @@
 export type ProviderResult = { text: string; detected: string };
 
-/** Точка расширения для DeepL, Cloud Translation с ключом, Chrome Translator API. */
+/** Extension point for DeepL, Cloud Translation with a key, Chrome's Translator API. */
 export interface Provider {
   id: string;
   translate(text: string, from: string, to: string, signal: AbortSignal): Promise<ProviderResult>;
 }
 
-/** Ответ сервиса с ошибкой. Сетевой сбой — обычный TypeError из fetch. */
+/** Error response from the service. A network failure is a plain TypeError from fetch. */
 export class ProviderError extends Error {
   constructor(
     readonly kind: 'rate_limited' | 'server',

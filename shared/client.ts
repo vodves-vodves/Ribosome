@@ -5,17 +5,17 @@ export type Result = TranslateResponse | { ok: false; error: 'ctx' };
 
 let seq = 0;
 
-/** Запрос в background через свой порт. `cancel()` закрывает порт — background отменяет запрос. */
+/** Request to the background over its own port. `cancel()` closes the port, and the background cancels the request. */
 export function requestTranslation(req: Req, onQueued: () => void): { result: Promise<Result>; cancel: () => void } {
   let port: Browser.runtime.Port;
   try {
     port = browser.runtime.connect({ name: PORT });
   } catch {
-    // content script пережил обновление расширения: chrome.runtime.id больше нет
+    // the content script outlived an extension update: chrome.runtime.id is gone
     return { result: Promise.resolve({ ok: false, error: 'ctx' }), cancel() {} };
   }
   const id = String(++seq);
-  // после обновления расширения старый порт бросает «Extension context invalidated» на любой вызов
+  // after an extension update the old port throws "Extension context invalidated" on any call
   const disconnect = () => {
     try {
       port.disconnect();
