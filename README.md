@@ -136,6 +136,7 @@ Every request goes through one place in the background, which keeps the free end
 - Ribosome talks to one server, `translate.googleapis.com`, and sends it only the text you asked to translate: a selection, what you typed in the popup, or the text of a page you translate, as you scroll to it.
 - No accounts, analytics or tracking. Settings live in `chrome.storage.sync`, recent translations in `chrome.storage.session`, which is cleared when the browser closes.
 - Permissions: `storage`, `contextMenus` for the right-click items, and access to `translate.googleapis.com`. The content script runs on every page so it can notice selections and translate the page when you ask.
+- The full [privacy policy](PRIVACY.md).
 
 > [!NOTE]
 > Ribosome uses the free, unofficial Google Translate endpoint. It needs no key, but Google may limit or change it at any time.
