@@ -93,6 +93,7 @@ export class Pill {
       this.unfold();
       return this.arm();
     }
+    this.el.classList.remove('is-mini');
     this.el.classList.add('is-on');
     this.place();
     void this.el.offsetWidth;
@@ -102,6 +103,8 @@ export class Pill {
 
   hide() {
     this.closeMenu();
+    clearTimeout(this.foldT);
+    this.foldT = undefined;
     this.el.classList.remove('is-on', 'is-in', 'is-mini');
   }
 
@@ -161,7 +164,7 @@ export class Pill {
     clearTimeout(this.foldT);
     this.foldT = setTimeout(() => {
       this.foldT = undefined;
-      if (!this.canFold || this.isMenu() || this.el.matches(':hover, :focus-within')) return;
+      if (!this.shown || !this.canFold || this.isMenu() || this.el.matches(':hover, :focus-within')) return;
       this.el.classList.add('is-mini');
       this.place();
     }, FOLD_MS);

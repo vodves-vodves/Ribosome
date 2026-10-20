@@ -34,6 +34,9 @@ export const test = base.extend<{ context: BrowserContext; extensionId: string; 
         contentType: 'text/html',
         body: `<title>Zellen</title><body style="font: 20px sans-serif">
           <p id="p">Ein <a href="#">Ribosom</a> ist alt.</p><code id="c">keep me</code>
+          <div id="pre" style="white-space: pre-wrap">Zeile eins
+Zeile zwei</div>
+          <div style="display: contents"><span id="dc">Ohne Box</span></div>
           <p id="far" style="margin-top: 3000px">Ganz unten.</p></body>`,
       }),
     );
