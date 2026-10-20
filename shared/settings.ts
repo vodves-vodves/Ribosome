@@ -1,4 +1,5 @@
 import { browser } from 'wxt/browser';
+import { LANGS } from './langs';
 
 export type Mode = 'icon' | 'instant';
 export type Theme = 'auto' | 'light' | 'dark';
@@ -14,22 +15,21 @@ export type Settings = {
   theme: Theme;
 };
 
-export const DEFAULTS: Settings = {
-  target: 'ru',
-  secondary: 'en',
-  source: 'auto',
-  mode: 'icon',
-  translateInFields: true,
-  provider: 'google',
-  theme: 'auto',
-};
+const secondFor = (target: string) => (target === 'en' ? 'es' : 'en');
+
+/** Translate into the browser's language when the list has it, English otherwise. */
+function defaults(): Settings {
+  const ui = browser.i18n.getUILanguage();
+  const target = [ui, ui.split('-')[0]!].find((l) => LANGS.includes(l)) ?? 'en';
+  return { target, secondary: secondFor(target), source: 'auto', mode: 'icon', translateInFields: true, provider: 'google', theme: 'auto' };
+}
 
 const KEY = 'settings';
 
 /** A corrupted stored value (`secondary === target`) is fixed rather than carried along. */
 export function normalize(raw?: Partial<Settings>): Settings {
-  const s = { ...DEFAULTS, ...raw };
-  if (s.secondary === s.target) s.secondary = s.target === 'en' ? 'ru' : 'en';
+  const s = { ...defaults(), ...raw };
+  if (s.secondary === s.target) s.secondary = secondFor(s.target);
   return s;
 }
 

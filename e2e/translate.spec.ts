@@ -6,8 +6,9 @@ test('selecting text shows the icon, the icon opens the translation', async ({ p
   await expect.poll(() => uiPoint(page, '.rb-trigger.is-in')).not.toBeNull();
   const icon = (await uiPoint(page, '.rb-trigger.is-in'))!;
   await page.mouse.click(icon.x, icon.y);
-  await expect.poll(() => uiText(page, '.rb-bubble .rb-bt')).toMatch(/^[a-z]{2}:Ribosomes are ancient\.$/);
-  expect(await uiText(page, '.rb-bubble .rb-lang')).toMatch(/^DE → [A-Z]{2}$/);
+  // the browser runs in English, so that's the default target
+  await expect.poll(() => uiText(page, '.rb-bubble .rb-bt')).toBe('en:Ribosomes are ancient.');
+  expect(await uiText(page, '.rb-bubble .rb-lang')).toBe('DE → EN');
 });
 
 test('a Google error is explained and can be retried', async ({ page, gtx }) => {
