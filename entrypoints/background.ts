@@ -1,9 +1,20 @@
 import { browser } from 'wxt/browser';
 import { defineBackground } from 'wxt/utils/define-background';
 import { sessionCache } from '@/shared/cache';
-import { PORT, type DoneMessage, type QueuedMessage, type TranslateRequest } from '@/shared/messages';
+import { t } from '@/shared/i18n';
+import {
+  PORT,
+  type BatchRequest,
+  type DoneMessage,
+  type OfferMessage,
+  type PageStateMessage,
+  type QueuedMessage,
+  type ShortcutMessage,
+  type TabMessage,
+  type TranslateRequest,
+} from '@/shared/messages';
 import { providers } from '@/shared/providers';
-import { loadSettings, watchSettings } from '@/shared/settings';
+import { loadSettings, setAutoSite, watchSettings } from '@/shared/settings';
 import { createTranslator } from '@/shared/translator';
 
 export default defineBackground(() => {
@@ -16,17 +27,70 @@ export default defineBackground(() => {
     cache: sessionCache(),
   });
 
-  // One port per request: the client closing it (new selection, closed window or popup) cancels the request
+  // One port per request: the client closing it (new selection, closed window or popup, page back to original) cancels the request
   browser.runtime.onConnect.addListener((port) => {
     if (port.name !== PORT) return;
     const ctrl = new AbortController();
     port.onDisconnect.addListener(() => ctrl.abort());
-    port.onMessage.addListener((req: TranslateRequest) => {
+    port.onMessage.addListener((req: TranslateRequest | BatchRequest) => {
+      const done = (res: DoneMessage['res']) => port.postMessage({ type: 'translate:done', id: req.id, res } satisfies DoneMessage);
+      if (req.type === 'batch') return void translator.translateBatch(req.texts, req.from, req.to, ctrl.signal).then(done, () => {});
       const queued: QueuedMessage = { type: 'translate:queued', id: req.id };
-      translator
-        .translate(req, ctrl.signal, () => port.postMessage(queued))
-        .then((res) => port.postMessage({ type: 'translate:done', id: req.id, res } satisfies DoneMessage))
-        .catch(() => {});
+      translator.translate(req, ctrl.signal, () => port.postMessage(queued)).then(done, () => {});
     });
+  });
+
+  // menus outlive the service worker; on update they are rebuilt with the new strings
+  browser.runtime.onInstalled.addListener(async () => {
+    await browser.contextMenus.removeAll();
+    const documentUrlPatterns = ['http://*/*', 'https://*/*'];
+    browser.contextMenus.create({ id: 'page', title: t('translatePage'), contexts: ['page'], documentUrlPatterns });
+    browser.contextMenus.create({ id: 'site', type: 'checkbox', title: t('alwaysSite'), contexts: ['page'], documentUrlPatterns });
+    browser.contextMenus.create({ id: 'sel', title: t('menuTranslateSel'), contexts: ['selection'], documentUrlPatterns });
+  });
+
+  // the content script may be missing (not loaded yet) or orphaned after an update
+  const send = (tabId: number, m: TabMessage) => browser.tabs.sendMessage(tabId, m).catch(() => {});
+
+  browser.contextMenus.onClicked.addListener((info, tab) => {
+    if (!tab?.id) return;
+    if (info.menuItemId === 'page') send(tab.id, { type: 'page:toggle' });
+    if (info.menuItemId === 'sel') send(tab.id, { type: 'sel:translate' });
+    // the page's content script sees the setting change and translates itself
+    if (info.menuItemId === 'site' && info.pageUrl) setAutoSite(new URL(info.pageUrl).hostname, !!info.checked);
+  });
+
+  browser.commands.onCommand.addListener((cmd, tab) => {
+    if (cmd === 'toggle-page' && tab?.id) send(tab.id, { type: 'page:toggle' });
+  });
+
+  browser.action.setBadgeBackgroundColor({ color: '#007aff' });
+  browser.action.setBadgeTextColor({ color: '#fff' });
+
+  const OFF = 'offerOff';
+  const dismissed = async () => ((await browser.storage.session.get(OFF))[OFF] as string[] | undefined) ?? [];
+  // two tabs dismissing at once must not overwrite each other's read-modify-write
+  let writes = Promise.resolve();
+
+  browser.runtime.onMessage.addListener((m: PageStateMessage | ShortcutMessage | OfferMessage, sender, respond) => {
+    if (m.type === 'shortcut') {
+      browser.commands.getAll().then((all) => respond(all.find((c) => c.name === 'toggle-page')?.shortcut ?? ''));
+      return true;
+    }
+    if (m.type === 'offer:ask') {
+      dismissed().then((hosts) => respond(hosts.includes(m.host)), () => respond(false));
+      return true;
+    }
+    if (m.type === 'offer:dismiss') {
+      writes = writes.then(() => dismissed().then((hosts) => browser.storage.session.set({ [OFF]: [...hosts, m.host] }))).catch(() => {});
+      return;
+    }
+    const tab = sender.tab;
+    if (m.type !== 'page:state' || !tab?.id) return;
+    browser.action.setBadgeText({ tabId: tab.id, text: m.on ? m.to.split('-')[0]!.toUpperCase() : '' });
+    // menus are shared by all tabs: they follow the visible one
+    if (!tab.active) return;
+    browser.contextMenus.update('page', { title: t(m.on ? 'showOriginal' : 'translatePage') }).catch(() => {});
+    browser.contextMenus.update('site', { checked: m.auto }).catch(() => {});
   });
 });

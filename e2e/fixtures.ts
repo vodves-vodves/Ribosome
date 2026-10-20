@@ -1,6 +1,9 @@
 import { test as base, chromium, type BrowserContext, type Page } from '@playwright/test';
 
 export const PAGE = 'http://ribosome.test/';
+export const ARTICLE = 'http://ribosome.test/article';
+/** Another site, in English: the browser's (and so the target) language. */
+export const ENGLISH = 'http://en.test/';
 
 type Gtx = { status: number };
 
@@ -15,13 +18,40 @@ export const test = base.extend<{ context: BrowserContext; extensionId: string; 
     });
     // fake Google: the translation is `<target>:<text>`, the detected language is always German
     await context.route('https://translate.googleapis.com/**', (route) => {
-      const url = new URL(route.request().url());
-      const q = url.searchParams.get('q') ?? '';
       if (gtx.status !== 200) return route.fulfill({ status: gtx.status });
-      return route.fulfill({ json: [[[`${url.searchParams.get('tl')}:${q}`, q]], null, 'de'] });
+      const url = new URL(route.request().url());
+      const tl = url.searchParams.get('tl');
+      if (url.pathname.endsWith('/t')) {
+        const qs = new URLSearchParams(route.request().postData() ?? '').getAll('q');
+        return route.fulfill({ json: qs.map((q) => [q.replace(/(<a i=\d+>)/g, `$1${tl}:`), 'de']) });
+      }
+      const q = url.searchParams.get('q') ?? '';
+      return route.fulfill({ json: [[[`${tl}:${q}`, q]], null, 'de'] });
     });
     await context.route(PAGE, (route) =>
       route.fulfill({ contentType: 'text/html', body: '<p style="font: 20px sans-serif; margin: 100px"><span id="t">Ribosomes are ancient.</span></p>' }),
+    );
+    await context.route(ENGLISH, (route) =>
+      route.fulfill({
+        contentType: 'text/html',
+        body: `<p>Ribosomes are the protein factories of every cell. They read the genetic message carried by messenger RNA
+          and join amino acids into long chains that fold into proteins. Without ribosomes no living thing could grow.</p>`,
+      }),
+    );
+    await context.route(ARTICLE, (route) =>
+      route.fulfill({
+        contentType: 'text/html',
+        body: `<title>Zellen</title><body style="font: 20px sans-serif">
+          <p id="p">Ein <a href="#">Ribosom</a> ist alt.</p><code id="c">keep me</code>
+          <div id="pre" style="white-space: pre-wrap">Zeile eins
+Zeile zwei</div>
+          <div style="display: contents"><span id="dc">Ohne Box</span></div>
+          <div id="gh" style="font-family: ui-monospace, monospace; white-space: pre"><span>import</span> x <span>from</span> 'y'; // Kommentar</div>
+          <h3 id="mono" style="font-family: monospace">Kopfzeile</h3>
+          <p>Ribosomen sind die Proteinfabriken jeder Zelle. Sie lesen die genetische Information der Boten-RNA und
+          verknüpfen Aminosäuren zu langen Ketten, aus denen sich Proteine falten. Ohne Ribosomen könnte kein Lebewesen wachsen.</p>
+          <p id="far" style="margin-top: 3000px">Ganz unten.</p></body>`,
+      }),
     );
     await use(context);
     await context.close();

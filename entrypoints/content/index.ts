@@ -1,13 +1,18 @@
+import { browser, type Browser } from 'wxt/browser';
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { createShadowRootUi } from 'wxt/utils/content-script-ui/shadow-root';
 import { t } from '@/shared/i18n';
+import { normLang } from '@/shared/langs';
+import type { OfferMessage, PageStateMessage, TabMessage } from '@/shared/messages';
 import base from '@/shared/ui/base.css?inline';
 import { ICON } from '@/shared/ui/icons';
-import { applyTheme, loadSettings, watchSettings, watchSystemTheme, type Settings } from '@/shared/settings';
+import { applyTheme, loadSettings, setAutoSite, watchSettings, watchSystemTheme, type Settings } from '@/shared/settings';
 import style from './style.css?inline';
 import { Bubble } from './bubble';
 import { anchorDead, anchorShown, clamp, clipUnder, headerRects, setPos, viewport, type Pos, type Side } from './geometry';
 import { locate } from './locate';
+import { PageTranslation, sampleText } from './page';
+import { Pill } from './pill';
 import { capture, eventRoots, focusRect, focusRoots, onScrollbar, sameRange, type Capture } from './selection';
 
 export default defineContentScript({
@@ -56,10 +61,136 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
   const theme = () => settings && applyTheme(root, settings.theme);
   ready.then(theme);
   watchSettings((s) => {
+    const was = auto();
     settings = s;
     theme();
+    // "Always translate this site" turned on here, in another tab or from the menu
+    if (auto() && !was && !page.view.on) return togglePage();
+    // offers turned off, or the target is now the page's own language
+    if (offer && !offerable(offer)) {
+      offer = '';
+      pill.hide();
+    }
+    pageChanged();
   });
   watchSystemTheme(theme);
+
+  /* ---------- whole page ---------- */
+  const site = location.hostname;
+  const auto = () => !!settings?.autoSites.includes(site);
+  const pill = new Pill(
+    root,
+    {
+      toggle: togglePage,
+      retry: () => page.retry(),
+      auto: (on) => void setAutoSite(site, on).catch(() => {}),
+      dismiss: () => {
+        offer = '';
+        tell({ type: 'offer:dismiss', host: site });
+      },
+    },
+    signal,
+  );
+  const page = new PageTranslation(pageChanged);
+  /** Language of a page that isn't in the target one, found on open: the bar offers to translate it. */
+  let offer = '';
+
+  async function togglePage() {
+    await ready;
+    if (page.view.on) page.restore();
+    else page.translate(settings!);
+    lift(host);
+    pill.show();
+  }
+
+  function tell<R>(m: PageStateMessage | OfferMessage): Promise<R | undefined> {
+    try {
+      return browser.runtime.sendMessage(m).catch(() => undefined);
+    } catch {
+      return Promise.resolve(undefined); // orphaned after an extension update
+    }
+  }
+
+  let reported = '';
+  /** The background keeps the toolbar badge and the right-click menu in step with the visible tab. */
+  function pageChanged(force = false) {
+    // once translated, the bar shows the page's real state
+    if (page.view.to) offer = '';
+    pill.render(offer ? { ...page.view, from: offer, to: settings!.target } : page.view, auto(), site, !!offer);
+    const m: PageStateMessage = { type: 'page:state', on: page.view.on, to: page.view.to, auto: auto() };
+    const key = `${m.on} ${m.to} ${m.auto}`;
+    if (key === reported && !force) return;
+    reported = key;
+    tell(m);
+  }
+
+  /** Offers are on, the page hasn't been translated in this load, and `lang` (if known) isn't the target. */
+  const offerable = (lang: string) =>
+    settings!.offerPages && !auto() && !page.view.to && !signal.aborted && lang.split('-')[0] !== settings!.target.split('-')[0];
+  /** An offer found while the tab was in the background, waiting to be seen: it would fold unread. */
+  let offerWaits = false;
+
+  /** A page that isn't in the target language gets an offer. The language is detected in the browser: nothing is sent. */
+  async function offerIfForeign(again = true) {
+    if (!offerable('')) return;
+    const text = sampleText();
+    // the content may still be loading: one more look a bit later
+    if (text.length < 200) return void (again && setTimeout(() => offerIfForeign(false), 2500));
+    let found: Browser.i18n.LanguageDetectionResult | null = null;
+    try {
+      found = await browser.i18n.detectLanguage(text);
+    } catch {}
+    const top = found?.languages[0];
+    if (!top || top.language === 'und' || (!found!.isReliable && top.percentage < 80)) return;
+    const lang = normLang(top.language);
+    // settings and the page may have changed during the awaits
+    if (!offerable(lang) || (await tell<boolean>({ type: 'offer:ask', host: site })) !== false || !offerable(lang)) return;
+    offer = lang;
+    pageChanged();
+    if (document.hidden) offerWaits = true;
+    else showOffer();
+  }
+
+  function showOffer() {
+    // lifting re-shows our whole layer: not under an open translation window
+    if (!active && !pinned.size) lift(host);
+    pill.show();
+  }
+
+  document.addEventListener(
+    'visibilitychange',
+    () => {
+      if (document.visibilityState !== 'visible') return;
+      pageChanged(true);
+      if (offerWaits && offer) showOffer();
+      offerWaits = false;
+    },
+    { signal },
+  );
+  ready.then(() => {
+    if (auto()) return togglePage();
+    pageChanged(true);
+    offerIfForeign();
+  });
+  // the instance replaced by an extension update gives the page back as it was
+  signal.addEventListener('abort', () => page.restore());
+
+  const onMessage = (m: TabMessage, _: unknown, respond: (r: unknown) => void) => {
+    if (m.type === 'page:toggle') togglePage();
+    if (m.type === 'page:get') respond({ on: page.view.on });
+    // the right-click item works in any mode and in fields too: it's an explicit request
+    if (m.type === 'sel:translate')
+      ready.then(() => {
+        const c = capture(focusRoots(), true);
+        if (c) open(c);
+      });
+  };
+  browser.runtime.onMessage.addListener(onMessage);
+  signal.addEventListener('abort', () => {
+    try {
+      browser.runtime.onMessage.removeListener(onMessage);
+    } catch {}
+  });
 
   const trigger = document.createElement('button');
   trigger.className = 'rb-trigger rb-surface';

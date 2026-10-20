@@ -3,7 +3,7 @@ import './style.css';
 import { browser } from 'wxt/browser';
 import { locale, t, type Key } from '@/shared/i18n';
 import { LANGS, langName } from '@/shared/langs';
-import { MAX_TEXT, type Req } from '@/shared/messages';
+import { MAX_TEXT, type Req, type TabMessage } from '@/shared/messages';
 import { applyTheme, loadSettings, saveSettings, watchSystemTheme, type Settings } from '@/shared/settings';
 import { COPY_LABEL, ICON } from '@/shared/ui/icons';
 import { copyText, createRunner, flashCopy, overlayScrollbar, render, type State } from '@/shared/ui/view';
@@ -120,6 +120,51 @@ view.copy.addEventListener('click', async () => {
 view.retry.addEventListener('click', () => (state?.kind === 'ctx' ? location.reload() : req && runner.run(req)));
 trLab.textContent = langName(trTo.value);
 
+/* ---------- Whole page: the active tab's content script knows its state ---------- */
+const pageBtn = $<HTMLButtonElement>('#page');
+const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+const tell = (m: TabMessage) => (tab?.id ? browser.tabs.sendMessage(tab.id, m).catch(() => null) : Promise.resolve(null));
+// no answer: a browser page, the store, or a tab opened before the extension was installed
+tell({ type: 'page:get' }).then((r: { on: boolean } | null) => {
+  if (!r) return;
+  pageBtn.hidden = false;
+  pageBtn.classList.toggle('is-on', r.on);
+  pageBtn.querySelector('span')!.textContent = t(r.on ? 'showOriginal' : 'translatePage');
+});
+pageBtn.addEventListener('click', async () => {
+  await tell({ type: 'page:toggle' });
+  close();
+});
+
+const key = $('#key');
+browser.commands.getAll().then((all) => {
+  const k = all.find((c) => c.name === 'toggle-page')?.shortcut;
+  key.textContent = k || t('shortcutNone');
+  key.classList.toggle('is-none', !k);
+});
+$('#set-key').addEventListener('click', () => browser.tabs.create({ url: 'chrome://extensions/shortcuts' }));
+
+function renderSites() {
+  const rows = S.autoSites.map((h) => {
+    const row = document.createElement('div');
+    row.className = 'rb-row';
+    const name = document.createElement('span');
+    name.className = 'host';
+    name.textContent = h;
+    const del = document.createElement('button');
+    del.className = 'rb-del';
+    del.title = del.ariaLabel = t('remove');
+    del.innerHTML = ICON.close;
+    del.addEventListener('click', () => save({ autoSites: S.autoSites.filter((x) => x !== h) }));
+    row.append(name, del);
+    return row;
+  });
+  const none = document.createElement('div');
+  none.className = 'rb-row is-none';
+  none.textContent = t('noSites');
+  $('#set-sites').replaceChildren(...(rows.length ? rows : [none]));
+}
+
 /* ---------- Settings, saved on change ---------- */
 fill($('[data-set=target]'), LANGS);
 fill($('[data-set=secondary]'), LANGS);
@@ -130,7 +175,9 @@ function apply() {
   $$<HTMLSelectElement>('select[data-set]').forEach((el) => (el.value = String(S[el.dataset.set as keyof Settings])));
   $$('#set-mode [data-mode]').forEach((el) => el.setAttribute('aria-checked', String(el.dataset.mode === S.mode)));
   $<HTMLInputElement>('#set-fields').checked = S.translateInFields;
+  $<HTMLInputElement>('#set-offer').checked = S.offerPages;
   $$('#set-theme button').forEach((el) => el.classList.toggle('is-on', el.dataset.theme === S.theme));
+  renderSites();
 }
 
 async function save(patch: Partial<Settings>) {
@@ -150,6 +197,7 @@ $('#set-mode').addEventListener('click', (e) => {
   if (r) save({ mode: r.dataset.mode as Settings['mode'] });
 });
 $<HTMLInputElement>('#set-fields').addEventListener('change', (e) => save({ translateInFields: (e.target as HTMLInputElement).checked }));
+$<HTMLInputElement>('#set-offer').addEventListener('change', (e) => save({ offerPages: (e.target as HTMLInputElement).checked }));
 $('#set-theme').addEventListener('click', (e) => {
   const b = (e.target as Element).closest<HTMLElement>('button[data-theme]');
   if (b) save({ theme: b.dataset.theme as Settings['theme'] });

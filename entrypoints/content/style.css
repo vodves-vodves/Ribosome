@@ -38,10 +38,42 @@
 .rb-bubble.is-drag { transition: none; }
 .rb-bubble.is-drag .rb-bh { cursor: grabbing; }
 
+/* page translation bar: a capsule that folds into a circle; the menu behind "…" */
+.rb-pill, .rb-pmenu { z-index: 1; }
+.rb-pill { position: fixed; top: 14px; right: 14px; display: none; align-items: center; gap: 8px; height: 40px; max-width: calc(100vw - 16px); padding: 0 6px; border-radius: 20px; touch-action: none; opacity: 0; transform: scale(.96); transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out); }
+.rb-pill.is-on { display: flex; }
+.rb-pill.is-in { opacity: 1; transform: none; }
+.rb-pill.is-mini { gap: 0; cursor: pointer; }
+.rb-pill.is-mini > :not(.rb-pi) { display: none; }
+.rb-pill.is-drag { cursor: grabbing; }
+.rb-pi { position: relative; flex: none; display: grid; place-items: center; width: 28px; height: 28px; color: var(--accent); }
+.rb-pi > svg { width: 16px; height: 16px; }
+.rb-pi > .rb-ring { position: absolute; inset: 0; width: 28px; height: 28px; transform: rotate(-90deg); fill: none; stroke-width: 2.2; }
+.rb-ring circle:first-child { stroke: var(--fill2); }
+.rb-ring circle:last-child { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset 300ms var(--ease-out); }
+.rb-ring.is-paused circle:last-child { stroke: var(--t3); }
+/* an offer, not yet translated: grey icon, and a blue dot once folded */
+.rb-pill.is-offer .rb-pi { color: var(--t2); }
+.rb-pill.is-offer.is-mini .rb-pi::after { content: ""; position: absolute; top: 3px; right: 2px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--glass); }
+.rb-pt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; letter-spacing: .005em; }
+.rb-pt .sub { color: var(--t2); }
+.rb-psep { flex: none; width: 1px; height: 18px; background: var(--sep); }
+.rb-pill .rb-btn.is-acc { background: var(--accent); color: #fff; }
+.rb-pill .rb-btn.is-acc:hover { filter: brightness(1.08); }
+.rb-more svg { width: 12px; height: 12px; }
+.rb-more[aria-expanded=true] { background: var(--accent); color: #fff; }
+.rb-pmenu { position: fixed; display: none; width: 280px; padding: 6px; border-radius: 12px; font-size: 13.5px; }
+.rb-pmenu.is-on { display: grid; gap: 2px; }
+.rb-prow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 8px; border-radius: 8px; cursor: pointer; }
+.rb-prow:hover { background: var(--fill); }
+.rb-prow .s { display: block; font-size: 12px; color: var(--t2); overflow-wrap: anywhere; }
+.rb-pft { margin-top: 4px; padding: 6px 8px 4px; border-top: 1px solid var(--sep); font-size: 12px; color: var(--t3); }
+.rb-pft kbd { padding: 1px 6px; border-radius: 5px; background: var(--fill); color: var(--t2); font: 500 12px var(--ui-font); }
+
 /* source text highlight: an overlay in our layer, the site's DOM is untouched */
 .rb-flash { position: fixed; pointer-events: none; border-radius: 3px; background: var(--accent); opacity: .26; animation: rb-flash 1.4s var(--ease-out) forwards; }
 @keyframes rb-flash { 0%, 45% { opacity: .26; } 100% { opacity: 0; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .rb-trigger, .rb-bubble, .rb-bubble.is-pinned { transition: opacity 120ms var(--ease-out); transform: none !important; }
+  .rb-trigger, .rb-bubble, .rb-bubble.is-pinned, .rb-pill { transition: opacity 120ms var(--ease-out); transform: none !important; }
 }

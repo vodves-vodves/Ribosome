@@ -1,6 +1,6 @@
 // The only way out to the network, with all the spam protection: cache, dedup, cancellation, limiter, backoff.
 import { normLang } from './langs';
-import { MAX_TEXT, type Req, type TranslateResponse } from './messages';
+import { MAX_TEXT, type BatchResponse, type Req, type TranslateFailure, type TranslateResponse } from './messages';
 import { ProviderError, type Provider, type ProviderResult } from './providers/types';
 
 export interface Cache {
@@ -96,7 +96,8 @@ export function createTranslator({ provider, langs, cache, acquire = createLimit
   let pauseUntil = 0;
   let step = 0;
 
-  async function run(p: Provider, key: string, from: string, to: string, text: string, signal: AbortSignal, onQueued: () => void, onStarted: () => void) {
+  /** A provider call through the 429 pause, the limiter and the offline check. */
+  async function guard<T>(signal: AbortSignal, onQueued: () => void, onStarted: () => void, call: () => Promise<T>): Promise<T> {
     if (Date.now() < pauseUntil) throw new Paused();
     await acquire(signal, onQueued);
     signal.throwIfAborted();
@@ -104,11 +105,9 @@ export function createTranslator({ provider, langs, cache, acquire = createLimit
     if (Date.now() < pauseUntil) throw new Paused();
     if (navigator.onLine === false) throw new TypeError('offline');
     try {
-      const r = await p.translate(text, from, to, signal);
+      const r = await call();
       step = 0;
-      const out = { text: r.text, detected: normLang(r.detected) };
-      await cache.set(key, out).catch(() => {});
-      return out;
+      return r;
     } catch (e) {
       // parallel requests get 429s in a batch: grow the pause once, not per response
       if (e instanceof ProviderError && e.kind === 'rate_limited' && Date.now() >= pauseUntil) {
@@ -117,6 +116,20 @@ export function createTranslator({ provider, langs, cache, acquire = createLimit
       }
       throw e;
     }
+  }
+
+  async function run(p: Provider, key: string, from: string, to: string, text: string, signal: AbortSignal, onQueued: () => void, onStarted: () => void) {
+    const r = await guard(signal, onQueued, onStarted, () => p.translate(text, from, to, signal));
+    const out = { text: r.text, detected: normLang(r.detected) };
+    await cache.set(key, out).catch(() => {});
+    return out;
+  }
+
+  function failure(e: unknown): TranslateFailure {
+    if (e instanceof Paused || (e instanceof ProviderError && e.kind === 'rate_limited'))
+      return { ok: false, error: 'rate_limited', retryAfter: Math.max(1, Math.ceil((pauseUntil - Date.now()) / 1000)) };
+    if (e instanceof ProviderError) return { ok: false, error: 'server', status: e.status };
+    return { ok: false, error: 'offline' };
   }
 
   /** A key already in flight doesn't start a second fetch. The fetch is aborted only when every waiter has left. */
@@ -186,12 +199,21 @@ export function createTranslator({ provider, langs, cache, acquire = createLimit
       return { ok: true, text: second.text, detected: first.detected, to: sec, cached: first.cached && second.cached, truncated };
     } catch (e) {
       if (signal.aborted) throw e;
-      if (e instanceof Paused || (e instanceof ProviderError && e.kind === 'rate_limited'))
-        return { ok: false, error: 'rate_limited', retryAfter: Math.max(1, Math.ceil((pauseUntil - Date.now()) / 1000)) };
-      if (e instanceof ProviderError) return { ok: false, error: 'server', status: e.status };
-      return { ok: false, error: 'offline' };
+      return failure(e);
     }
   }
 
-  return { translate };
+  /** Page segments: no cache (the page keeps its own translations) and no second-language rule (the page decides). */
+  async function translateBatch(texts: string[], from: string, to: string, signal: AbortSignal): Promise<BatchResponse> {
+    try {
+      const p = await provider();
+      const r = await guard(signal, () => {}, () => {}, () => p.translateMany(texts, from, to, signal));
+      return { ok: true, texts: r.map((x) => x.text), detected: r.map((x) => normLang(x.detected)) };
+    } catch (e) {
+      if (signal.aborted) throw e;
+      return failure(e);
+    }
+  }
+
+  return { translate, translateBatch };
 }
