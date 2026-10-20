@@ -1,6 +1,7 @@
 import { test as base, chromium, type BrowserContext, type Page } from '@playwright/test';
 
 export const PAGE = 'http://ribosome.test/';
+export const ARTICLE = 'http://ribosome.test/article';
 
 type Gtx = { status: number };
 
@@ -15,13 +16,26 @@ export const test = base.extend<{ context: BrowserContext; extensionId: string; 
     });
     // fake Google: the translation is `<target>:<text>`, the detected language is always German
     await context.route('https://translate.googleapis.com/**', (route) => {
-      const url = new URL(route.request().url());
-      const q = url.searchParams.get('q') ?? '';
       if (gtx.status !== 200) return route.fulfill({ status: gtx.status });
-      return route.fulfill({ json: [[[`${url.searchParams.get('tl')}:${q}`, q]], null, 'de'] });
+      const url = new URL(route.request().url());
+      const tl = url.searchParams.get('tl');
+      if (url.pathname.endsWith('/t')) {
+        const qs = new URLSearchParams(route.request().postData() ?? '').getAll('q');
+        return route.fulfill({ json: qs.map((q) => [q.replace(/(<a i=\d+>)/g, `$1${tl}:`), 'de']) });
+      }
+      const q = url.searchParams.get('q') ?? '';
+      return route.fulfill({ json: [[[`${tl}:${q}`, q]], null, 'de'] });
     });
     await context.route(PAGE, (route) =>
       route.fulfill({ contentType: 'text/html', body: '<p style="font: 20px sans-serif; margin: 100px"><span id="t">Ribosomes are ancient.</span></p>' }),
+    );
+    await context.route(ARTICLE, (route) =>
+      route.fulfill({
+        contentType: 'text/html',
+        body: `<title>Zellen</title><body style="font: 20px sans-serif">
+          <p id="p">Ein <a href="#">Ribosom</a> ist alt.</p><code id="c">keep me</code>
+          <p id="far" style="margin-top: 3000px">Ganz unten.</p></body>`,
+      }),
     );
     await use(context);
     await context.close();

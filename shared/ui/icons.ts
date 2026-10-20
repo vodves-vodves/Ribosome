@@ -14,6 +14,7 @@ export const ICON = {
   down: svg(10, 'stroke-width="1.6"', '<path d="M2 3.5 5 6.5l3-3"/>'),
   right: svg(10, 'stroke-width="1.6"', '<path d="M3.5 2 6.5 5l-3 3"/>'),
   swap: svg(16, 'stroke-width="1.6"', '<path d="M2.5 5.5h10l-2.5-2.5M13.5 10.5h-10L6 13"/>'),
+  more: '<svg viewBox="0 0 16 16" fill="currentColor"><circle cx="3.5" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="12.5" cy="8" r="1.4"/></svg>',
 };
 
 export const COPY_LABEL = `${ICON.copy}<span class="lbl">${t('copy')}</span>`;

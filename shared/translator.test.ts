@@ -9,11 +9,17 @@ const memCache = (): Cache => {
 
 const fake = (impl?: (text: string, from: string, to: string) => { text: string; detected: string }) => {
   const calls: { text: string; from: string; to: string; at: number }[] = [];
+  const translate = async (text: string, from: string, to: string) => {
+    calls.push({ text, from, to, at: Date.now() });
+    return impl ? impl(text, from, to) : { text: `${to}:${text}`, detected: 'en' };
+  };
   const p: Provider = {
     id: 'fake',
-    translate: async (text, from, to) => {
-      calls.push({ text, from, to, at: Date.now() });
-      return impl ? impl(text, from, to) : { text: `${to}:${text}`, detected: 'en' };
+    translate,
+    translateMany: async (texts, from, to) => {
+      const r = [];
+      for (const text of texts) r.push(await translate(text, from, to));
+      return r;
     },
   };
   return { p, calls };
@@ -62,6 +68,7 @@ test('cancelling one waiter keeps the request for the other', async () => {
       calls.push(text);
       return new Promise((r) => setTimeout(() => r({ text: `${to}:${text}`, detected: 'en' }), 1000));
     },
+    translateMany: async () => [],
   };
   const t = setup(p);
   const req = { text: 'hello', from: 'auto', to: 'ru' };
@@ -121,6 +128,20 @@ test('backoff on 429: 2 s pause, no requests during it, reset after success', as
   expect(await t.translate({ text: 'd', from: 'auto', to: 'ru' }, never, () => {})).toMatchObject({ ok: true });
   limited = true;
   expect(await t.translate({ text: 'e', from: 'auto', to: 'ru' }, never, () => {})).toMatchObject({ retryAfter: 2 });
+});
+
+test('page batch: one answer per segment, and its 429 pauses selection translations too', async () => {
+  let limited = false;
+  const { p, calls } = fake((text, _f, to) => {
+    if (limited) throw new ProviderError('rate_limited', 429);
+    return { text: `${to}:${text}`, detected: 'iw' };
+  });
+  const t = setup(p);
+  expect(await t.translateBatch(['a', 'b'], 'auto', 'ru', never)).toEqual({ ok: true, texts: ['ru:a', 'ru:b'], detected: ['he', 'he'] });
+  limited = true;
+  expect(await t.translateBatch(['c'], 'auto', 'ru', never)).toEqual({ ok: false, error: 'rate_limited', retryAfter: 2 });
+  expect(await t.translate({ text: 'd', from: 'auto', to: 'ru' }, never, () => {})).toMatchObject({ error: 'rate_limited' });
+  expect(calls).toHaveLength(3);
 });
 
 test('errors: 5xx is server with status, fetch failure is offline', async () => {

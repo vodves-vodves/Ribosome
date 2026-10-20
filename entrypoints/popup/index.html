@@ -10,6 +10,7 @@
     <header class="rb-ph">
       <img class="logo" src="/icon/48.png" alt="">
       <span class="name">Ribosome</span>
+      <button class="rb-btn rb-page" id="page" hidden><i data-icon="translate"></i><span></span></button>
     </header>
     <div class="rb-seg" id="tabs">
       <button class="is-on" data-tab="tr" data-i18n="tabTranslate"></button>
@@ -57,6 +58,15 @@
           <div class="box">
             <label class="rb-row"><span data-i18n="inFields"></span><input type="checkbox" class="rb-switch" role="switch" id="set-fields"></label>
           </div>
+        </div>
+
+        <div class="rb-grp">
+          <h4 data-i18n="pageTranslation"></h4>
+          <div class="box">
+            <button class="rb-row is-pick" id="set-key"><span data-i18n="shortcut"></span><span class="val"><kbd id="key"></kbd><i data-icon="right"></i></span></button>
+          </div>
+          <div class="box" id="set-sites"></div>
+          <p class="note" data-i18n="sitesNote"></p>
         </div>
 
         <div class="rb-grp">

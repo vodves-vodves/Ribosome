@@ -13,6 +13,8 @@ export type Settings = {
   translateInFields: boolean;
   provider: 'google';
   theme: Theme;
+  /** Hostnames whose pages are translated as soon as they open. */
+  autoSites: string[];
 };
 
 const secondFor = (target: string) => (target === 'en' ? 'es' : 'en');
@@ -23,7 +25,7 @@ const UI_ALIASES: Record<string, string> = { nb: 'no', nn: 'no', 'zh-HK': 'zh-TW
 function defaults(): Settings {
   const ui = browser.i18n.getUILanguage();
   const target = [UI_ALIASES[ui], ui, ui.split('-')[0]!].find((l) => l && LANGS.includes(l)) ?? 'en';
-  return { target, secondary: secondFor(target), source: 'auto', mode: 'icon', translateInFields: true, provider: 'google', theme: 'auto' };
+  return { target, secondary: secondFor(target), source: 'auto', mode: 'icon', translateInFields: true, provider: 'google', theme: 'auto', autoSites: [] };
 }
 
 const KEY = 'settings';
@@ -54,6 +56,11 @@ export async function saveSettings(patch: Partial<Settings>): Promise<Settings> 
   const next = merge(await loadSettings(), patch);
   await browser.storage.sync.set({ [KEY]: next });
   return next;
+}
+
+export async function setAutoSite(host: string, on: boolean): Promise<Settings> {
+  const sites = (await loadSettings()).autoSites.filter((h) => h !== host);
+  return saveSettings({ autoSites: on ? [...sites, host] : sites });
 }
 
 export function watchSettings(cb: (s: Settings) => void): () => void {

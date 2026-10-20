@@ -1,13 +1,17 @@
+import { browser } from 'wxt/browser';
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { createShadowRootUi } from 'wxt/utils/content-script-ui/shadow-root';
 import { t } from '@/shared/i18n';
+import type { PageStateMessage, TabMessage } from '@/shared/messages';
 import base from '@/shared/ui/base.css?inline';
 import { ICON } from '@/shared/ui/icons';
-import { applyTheme, loadSettings, watchSettings, watchSystemTheme, type Settings } from '@/shared/settings';
+import { applyTheme, loadSettings, setAutoSite, watchSettings, watchSystemTheme, type Settings } from '@/shared/settings';
 import style from './style.css?inline';
 import { Bubble } from './bubble';
 import { anchorDead, anchorShown, clamp, clipUnder, headerRects, setPos, viewport, type Pos, type Side } from './geometry';
 import { locate } from './locate';
+import { PageTranslation } from './page';
+import { Pill } from './pill';
 import { capture, eventRoots, focusRect, focusRoots, onScrollbar, sameRange, type Capture } from './selection';
 
 export default defineContentScript({
@@ -56,10 +60,62 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
   const theme = () => settings && applyTheme(root, settings.theme);
   ready.then(theme);
   watchSettings((s) => {
+    const was = auto();
     settings = s;
     theme();
+    // "Always translate this site" turned on here, in another tab or from the menu
+    if (auto() && !was && !page.view.on) togglePage();
+    else pageChanged();
   });
   watchSystemTheme(theme);
+
+  /* ---------- whole page ---------- */
+  const site = location.hostname;
+  const auto = () => !!settings?.autoSites.includes(site);
+  const pill = new Pill(root, { toggle: togglePage, retry: () => page.retry(), auto: (on) => void setAutoSite(site, on).catch(() => {}) }, signal);
+  const page = new PageTranslation(pageChanged);
+
+  async function togglePage() {
+    await ready;
+    if (page.view.on) page.restore();
+    else page.translate(settings!);
+    lift(host);
+    pill.show();
+  }
+
+  let reported = '';
+  /** The background keeps the toolbar badge and the right-click menu in step with the visible tab. */
+  function pageChanged(force = false) {
+    pill.render(page.view, auto(), site);
+    const m: PageStateMessage = { type: 'page:state', on: page.view.on, to: page.view.to, auto: auto() };
+    const key = `${m.on} ${m.to} ${m.auto}`;
+    if (key === reported && !force) return;
+    reported = key;
+    try {
+      browser.runtime.sendMessage(m).catch(() => {});
+    } catch {} // orphaned after an extension update
+  }
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && pageChanged(true), { signal });
+  ready.then(() => (auto() ? togglePage() : pageChanged(true)));
+  // the instance replaced by an extension update gives the page back as it was
+  signal.addEventListener('abort', () => page.restore());
+
+  const onMessage = (m: TabMessage, _: unknown, respond: (r: unknown) => void) => {
+    if (m.type === 'page:toggle') togglePage();
+    if (m.type === 'page:get') respond({ on: page.view.on });
+    // the right-click item works in any mode and in fields too: it's an explicit request
+    if (m.type === 'sel:translate')
+      ready.then(() => {
+        const c = capture(focusRoots(), true);
+        if (c) open(c);
+      });
+  };
+  browser.runtime.onMessage.addListener(onMessage);
+  signal.addEventListener('abort', () => {
+    try {
+      browser.runtime.onMessage.removeListener(onMessage);
+    } catch {}
+  });
 
   const trigger = document.createElement('button');
   trigger.className = 'rb-trigger rb-surface';

@@ -8,14 +8,20 @@ export default defineConfig({
     default_locale: 'en',
     // appearance: base-select for the popup dropdowns
     minimum_chrome_version: '135',
-    permissions: ['storage'],
+    permissions: ['storage', 'contextMenus'],
     host_permissions: ['https://translate.googleapis.com/*'],
+    commands: {
+      'toggle-page': { suggested_key: { default: 'Alt+T' }, description: '__MSG_cmdTogglePage__' },
+    },
   },
   hooks: {
-    // the manifest description is the only string Chrome localizes by itself
+    // the manifest description and the shortcut name are the only strings Chrome localizes by itself
     'build:publicAssets'(_, files) {
       for (const [lang, m] of Object.entries(LOCALES))
-        files.push({ relativeDest: `_locales/${lang}/messages.json`, contents: JSON.stringify({ extDescription: { message: m.extDescription } }) });
+        files.push({
+          relativeDest: `_locales/${lang}/messages.json`,
+          contents: JSON.stringify({ extDescription: { message: m.extDescription }, cmdTogglePage: { message: m.cmdTogglePage } }),
+        });
     },
   },
 });

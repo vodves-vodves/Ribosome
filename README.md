@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <strong>Translate selected text right on the page.</strong><br>
+  <strong>Translate selected text or the whole page, right where you read.</strong><br>
   A browser extension for Chrome and Edge. Free, no API key.
 </p>
 
@@ -24,7 +24,7 @@
   <b>English</b> · <a href="README.ru.md">Русский</a>
 </p>
 
-Select a phrase on any site and its translation appears in a small glass window right next to it. No new tab, no copy and paste. Pin the windows you want to keep, jump back to their source text in one click, and translate anything else from the toolbar popup.
+Select a phrase on any site and its translation appears in a small glass window right next to it. No new tab, no copy and paste. Pin the windows you want to keep, jump back to their source text in one click, translate the whole page in place, and anything else from the toolbar popup.
 
 **41** languages · **0** API keys · **0** runtime dependencies · **~50 KB** on the page.
 
@@ -73,11 +73,24 @@ Pin a window and it stays on screen while you read on. Drag it by its header and
   </picture>
 </p>
 
-### 03 · A second language for text you can already read
+### 03 · The whole page
+
+Right-click the page and pick **Ribosome › Translate page**, press <kbd>Alt</kbd>+<kbd>T</kbd>, or use the button in the popup. The text is replaced in place: the layout, links and buttons stay as they were, and code and form fields are left alone. What's on screen goes first, the rest follows as you scroll, and new posts in a feed are translated as they appear.
+
+A small bar shows the languages and an **Original** button. After a few seconds it folds into a circle, and you can drag it anywhere: it remembers the spot. Turn on **Always translate this site** in its menu or in the right-click menu, and the site is translated as soon as it opens. The right-click menu also translates a selection, whatever the trigger mode.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/readme/page-dark.png">
+    <img src="docs/readme/page-light.png" alt="A German article translated into English in place, with the Ribosome bar in the corner">
+  </picture>
+</p>
+
+### 04 · A second language for text you can already read
 
 When the selection is already in your language, Ribosome translates it into your second language instead of echoing it back. Translating into English and selecting an English sentence? You get Spanish, or whatever you choose.
 
-### 04 · The popup
+### 05 · The popup
 
 Type or paste anything to translate it, and swap the languages in one click. Settings are saved as you change them and travel with your browser profile.
 
@@ -98,28 +111,29 @@ Type or paste anything to translate it, and swap the languages in one click. Set
   </tr>
 </table>
 
-### 05 · At home on any page
+### 06 · At home on any page
 
 - Lives in a closed Shadow DOM in the browser's top layer: site styles can't break it, and it leaves the site's own elements alone. Even the highlight is an overlay.
 - Works in input fields and text areas (you can turn that off), inside open shadow roots, and keeps up with single-page apps changing routes.
 - Follows the system light or dark theme, or the one you pick.
 - Speaks English and Russian, depending on the browser language.
 
-### 06 · Gentle with Google
+### 07 · Gentle with Google
 
 Every request goes through one place in the background, which keeps the free endpoint happy:
 
 - up to 500 recent translations are cached until the browser closes;
 - identical requests are merged, and a request is cancelled as soon as its window closes;
+- a page goes in batches of up to 100 paragraphs, and only the part near the screen;
 - at most one request per 250 ms and 20 per 10 s; extra requests wait in line, none are dropped;
 - after a 429 it pauses for 2, 4, 8… up to 60 s, shows a countdown and retries on its own;
 - selections over 5000 characters are trimmed, with a note saying so.
 
 ## Privacy
 
-- Ribosome talks to one server, `translate.googleapis.com`, and sends it only the text you asked to translate.
+- Ribosome talks to one server, `translate.googleapis.com`, and sends it only the text you asked to translate: a selection, what you typed in the popup, or the text of a page you translate, as you scroll to it.
 - No accounts, analytics or tracking. Settings live in `chrome.storage.sync`, recent translations in `chrome.storage.session`, which is cleared when the browser closes.
-- Permissions: `storage` and access to `translate.googleapis.com`. The content script runs on every page so it can notice selections.
+- Permissions: `storage`, `contextMenus` for the right-click items, and access to `translate.googleapis.com`. The content script runs on every page so it can notice selections and translate the page when you ask.
 
 > [!NOTE]
 > Ribosome uses the free, unofficial Google Translate endpoint. It needs no key, but Google may limit or change it at any time.
@@ -138,7 +152,7 @@ Before the first `npm run e2e`, run `npx playwright install chromium`.
 | Path | What's there |
 | --- | --- |
 | `entrypoints/background.ts` | the only network access: translator with cache, queue and backoff |
-| `entrypoints/content/` | selection, trigger icon, translation windows, "show on page" |
+| `entrypoints/content/` | selection, trigger icon, translation windows, "show on page", page translation and its bar |
 | `entrypoints/popup/` | Translate and Settings tabs |
 | `shared/` | translator, Google provider, settings, locales, shared UI |
 | `e2e/` | Playwright tests against a fake Google |
