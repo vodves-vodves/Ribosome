@@ -1,4 +1,5 @@
 // "Show on page": scroll to a pinned window's source text and highlight it with an overlay. The site's DOM is left alone.
+import { t } from '@/shared/i18n';
 import type { Bubble } from './bubble';
 import { anchorDead, anchorRect, clipUnder, headerRects, viewport, type Anchor } from './geometry';
 
@@ -144,8 +145,8 @@ let stopListening: (() => void) | null = null;
  */
 export function locate(b: Bubble, layer: HTMLElement, host: Element, pinned: Iterable<Bubble>) {
   const a = b.anchor;
-  if (anchorDead(a)) return b.note('Текст на странице уже не найден — страница изменилась.');
-  if (!anchorRects(a).length) return b.note('Текст на странице сейчас скрыт.');
+  if (anchorDead(a)) return b.note(t('textGone'));
+  if (!anchorRects(a).length) return b.note(t('textHidden'));
   if (locating === b) return;
   stopListening?.();
   const my = ++tok;

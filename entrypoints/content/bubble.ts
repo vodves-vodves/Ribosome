@@ -1,3 +1,4 @@
+import { t } from '@/shared/i18n';
 import type { Req } from '@/shared/messages';
 import { COPY_LABEL, ICON } from '@/shared/ui/icons';
 import { copyText, createRunner, flashCopy, overlayScrollbar, render, type State, type View } from '@/shared/ui/view';
@@ -13,18 +14,18 @@ const TPL = `
 <div class="rb-bh">
   <span class="rb-lang"></span>
   <span class="rb-hb">
-    <button class="rb-ib rb-loc" aria-label="Показать на странице" title="Показать на странице">${ICON.locate}</button>
-    <button class="rb-ib rb-pin" aria-label="Закрепить" title="Закрепить">${ICON.pin}</button>
-    <button class="rb-ib rb-x" aria-label="Закрыть" title="Закрыть">${ICON.close}</button>
+    <button class="rb-ib rb-loc" aria-label="${t('showOnPage')}" title="${t('showOnPage')}">${ICON.locate}</button>
+    <button class="rb-ib rb-pin" aria-label="${t('pin')}" title="${t('pin')}">${ICON.pin}</button>
+    <button class="rb-ib rb-x" aria-label="${t('close')}" title="${t('close')}">${ICON.close}</button>
   </span>
 </div>
-<button class="rb-src" hidden title="Показать на странице" dir="auto"></button>
+<button class="rb-src" hidden title="${t('showOnPage')}" dir="auto"></button>
 <div class="rb-bt" dir="auto"></div>
 <div class="rb-note" hidden></div>
 <div class="rb-bf">
   <span class="rb-prov">Google Translate</span>
   <span class="rb-acts">
-    <button class="rb-btn rb-retry" hidden>Повторить</button>
+    <button class="rb-btn rb-retry" hidden>${t('retry')}</button>
     <button class="rb-btn rb-copy" hidden>${COPY_LABEL}</button>
   </span>
 </div>`;
@@ -47,7 +48,7 @@ export class Bubble {
     const el = this.el;
     el.className = 'rb-bubble rb-surface';
     el.setAttribute('role', 'dialog');
-    el.setAttribute('aria-label', 'Перевод');
+    el.setAttribute('aria-label', t('translation'));
     el.innerHTML = TPL;
     this.v = { bt: this.q('.rb-bt'), note: this.q('.rb-note'), copy: this.q('.rb-copy'), retry: this.q('.rb-retry') };
     this.lang = this.q('.rb-lang');
@@ -93,7 +94,7 @@ export class Bubble {
   togglePin() {
     const on = this.el.classList.toggle('is-pinned');
     const pin = this.q('.rb-pin');
-    pin.title = on ? 'Открепить' : 'Закрепить';
+    pin.title = t(on ? 'unpin' : 'pin');
     pin.setAttribute('aria-label', pin.title);
     const src = this.q('.rb-src');
     src.hidden = !on;

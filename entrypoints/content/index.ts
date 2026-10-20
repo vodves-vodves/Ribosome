@@ -1,5 +1,6 @@
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { createShadowRootUi } from 'wxt/utils/content-script-ui/shadow-root';
+import { t } from '@/shared/i18n';
 import base from '@/shared/ui/base.css?inline';
 import { ICON } from '@/shared/ui/icons';
 import { applyTheme, loadSettings, watchSettings, watchSystemTheme, type Settings } from '@/shared/settings';
@@ -62,8 +63,8 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
 
   const trigger = document.createElement('button');
   trigger.className = 'rb-trigger rb-surface';
-  trigger.setAttribute('aria-label', 'Перевести');
-  trigger.title = 'Перевести';
+  trigger.setAttribute('aria-label', t('translate'));
+  trigger.title = t('translate');
   trigger.innerHTML = ICON.translate;
   root.append(trigger);
 
@@ -258,7 +259,7 @@ function start(root: HTMLElement, shadow: ShadowRoot, host: HTMLElement, signal:
   const checkRoute = () =>
     setTimeout(() => {
       if (active && anchorDead(active.anchor)) active.close();
-      pinned.forEach((b) => anchorDead(b.anchor) && b.note('Текст на странице уже не найден — страница изменилась.'));
+      pinned.forEach((b) => anchorDead(b.anchor) && b.note(t('textGone')));
     }, 1000);
   (globalThis as { navigation?: EventTarget }).navigation?.addEventListener('navigatesuccess', checkRoute, { signal });
   addEventListener('popstate', checkRoute, { signal });

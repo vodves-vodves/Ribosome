@@ -1,6 +1,7 @@
 import '@/shared/ui/base.css';
 import './style.css';
 import { browser } from 'wxt/browser';
+import { locale, t, type Key } from '@/shared/i18n';
 import { LANGS, langName } from '@/shared/langs';
 import { MAX_TEXT, type Req } from '@/shared/messages';
 import { applyTheme, loadSettings, saveSettings, watchSystemTheme, type Settings } from '@/shared/settings';
@@ -10,7 +11,12 @@ import { copyText, createRunner, flashCopy, overlayScrollbar, render, type State
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector<T>(s)!;
 const $$ = <T extends HTMLElement = HTMLElement>(s: string) => [...document.querySelectorAll<T>(s)];
 
-document.querySelectorAll<HTMLElement>('i[data-icon]').forEach((i) => (i.innerHTML = ICON[i.dataset.icon as keyof typeof ICON]));
+document.documentElement.lang = locale();
+$$('[data-i18n]').forEach((el) => (el.textContent = t(el.dataset.i18n as Key)));
+$$('[data-i18n-label]').forEach((el) => (el.ariaLabel = t(el.dataset.i18nLabel as Key)));
+$$('[data-i18n-title]').forEach((el) => (el.title = el.ariaLabel = t(el.dataset.i18nTitle as Key)));
+$<HTMLTextAreaElement>('#tr-in').placeholder = t('inputPlaceholder');
+$$('i[data-icon]').forEach((i) => (i.innerHTML = ICON[i.dataset.icon as keyof typeof ICON]));
 $('#tr-copy').innerHTML = COPY_LABEL;
 $('#ver').textContent = `Ribosome ${browser.runtime.getManifest().version}`;
 
@@ -62,7 +68,7 @@ function run() {
     runner.stop();
     state = req = null;
     view.note.hidden = view.copy.hidden = view.retry.hidden = true;
-    view.bt.textContent = 'Перевод появится здесь';
+    view.bt.textContent = t('outputPlaceholder');
     view.bt.classList.add('is-empty');
     view.bt.dispatchEvent(new Event('rb:content'));
     return;
