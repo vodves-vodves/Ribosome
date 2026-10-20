@@ -73,4 +73,7 @@ export default {
   noSites: 'No sites yet',
   sitesNote: 'These sites are translated as soon as they open. Add one from the right-click menu or the bar on the page.',
   remove: 'Remove',
+  offerPages: 'Offer to translate',
+  offerNote: "The bar shows up on pages that aren't in your target language. The language is detected in the browser: no text leaves it until you click Translate.",
+  dismissOffer: "Don't offer on this site until the browser closes",
 };

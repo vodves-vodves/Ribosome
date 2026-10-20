@@ -6,12 +6,14 @@ import { ICON } from '@/shared/ui/icons';
 import { clamp, viewport } from './geometry';
 import type { PageError, PageView } from './page';
 
-type Hooks = { toggle(): void; retry(): void; auto(on: boolean): void };
+type Hooks = { toggle(): void; retry(): void; auto(on: boolean): void; dismiss(): void };
 /** Distance from the nearer side edge and from the top: the capsule grows away from that edge when it unfolds. */
 type Spot = { side: 'left' | 'right'; x: number; y: number };
 
 const SPOT = 'pillSpot';
 const FOLD_MS = 3000;
+/** An offer nobody asked for gets more time to be read before it folds. */
+const OFFER_FOLD_MS = 8000;
 const RING = 2 * Math.PI * 12;
 const DRAG_END = ['pointerup', 'pointercancel', 'lostpointercapture'] as const;
 
@@ -56,7 +58,10 @@ export class Pill {
 
     this.q('.rb-pa').addEventListener('click', () => this.actions.a?.());
     this.q('.rb-pb').addEventListener('click', () => this.actions.b?.());
-    this.q('.rb-x').addEventListener('click', () => this.hide());
+    this.q('.rb-x').addEventListener('click', () => {
+      if (this.offering) this.hooks.dismiss();
+      this.hide();
+    });
     this.q('.rb-more').addEventListener('click', () => this.toggleMenu());
     this.menu.querySelector('input')!.addEventListener('change', (e) => this.hooks.auto((e.target as HTMLInputElement).checked));
     el.addEventListener('pointerdown', (e) => this.drag(e));
@@ -84,6 +89,10 @@ export class Pill {
     return this.el.querySelector<T>(s)!;
   }
 
+  private get offering() {
+    return this.el.classList.contains('is-offer');
+  }
+
   get shown() {
     return this.el.classList.contains('is-on');
   }
@@ -108,8 +117,14 @@ export class Pill {
     this.el.classList.remove('is-on', 'is-in', 'is-mini');
   }
 
-  render(v: PageView, auto: boolean, host: string) {
+  /** `offer`: the page hasn't been translated yet and its language isn't the target, `v.from` is the detected one. */
+  render(v: PageView, auto: boolean, host: string, offer = false) {
     const e = v.error;
+    offer &&= !v.on && !e;
+    this.el.classList.toggle('is-offer', offer);
+    const x = this.q('.rb-x');
+    x.title = t(offer ? 'dismissOffer' : 'hide');
+    x.setAttribute('aria-label', x.title);
     const txt = this.q('.rb-pt');
     const sub = (s: string) => {
       const span = document.createElement('span');
@@ -118,10 +133,11 @@ export class Pill {
       txt.append(span);
     };
     if (e) txt.textContent = errText(e);
+    else if (offer) txt.textContent = `${langName(v.from)} → ${langName(v.to)}`;
     else if (!v.on) txt.textContent = t('showingOriginal');
     else txt.textContent = v.from ? `${langName(v.from)} → ${langName(v.to)}` : t('pageTranslating');
     if (e?.kind === 'rate_limited') sub(t('resumeIn', e.wait));
-    else if (!v.on && v.from) sub(langName(v.from));
+    else if (!v.on && !offer && v.from) sub(langName(v.from));
 
     const a = this.q<HTMLButtonElement>('.rb-pa');
     const b = this.q<HTMLButtonElement>('.rb-pb');
@@ -167,7 +183,7 @@ export class Pill {
       if (!this.shown || !this.canFold || this.isMenu() || this.el.matches(':hover, :focus-within')) return;
       this.el.classList.add('is-mini');
       this.place();
-    }, FOLD_MS);
+    }, this.offering ? OFFER_FOLD_MS : FOLD_MS);
   }
 
   private isMenu() {

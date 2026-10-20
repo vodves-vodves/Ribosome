@@ -52,6 +52,9 @@
 .rb-ring circle:first-child { stroke: var(--fill2); }
 .rb-ring circle:last-child { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset 300ms var(--ease-out); }
 .rb-ring.is-paused circle:last-child { stroke: var(--t3); }
+/* an offer, not yet translated: grey icon, and a blue dot once folded */
+.rb-pill.is-offer .rb-pi { color: var(--t2); }
+.rb-pill.is-offer.is-mini .rb-pi::after { content: ""; position: absolute; top: 3px; right: 2px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--glass); }
 .rb-pt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; letter-spacing: .005em; }
 .rb-pt .sub { color: var(--t2); }
 .rb-psep { flex: none; width: 1px; height: 18px; background: var(--sep); }

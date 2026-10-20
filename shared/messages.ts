@@ -26,3 +26,5 @@ export type TabMessage = { type: 'page:toggle' } | { type: 'page:get' } | { type
 /** Content script → background: the right-click menu and the toolbar badge follow the visible tab. */
 export type PageStateMessage = { type: 'page:state'; on: boolean; to: string; auto: boolean };
 export type ShortcutMessage = { type: 'shortcut' };
+/** "×" on the offer hides it on this site until the browser closes; the list lives in the background's session storage. */
+export type OfferMessage = { type: 'offer:ask'; host: string } | { type: 'offer:dismiss'; host: string };

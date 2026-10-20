@@ -37,6 +37,8 @@ export const test = base.extend<{ context: BrowserContext; extensionId: string; 
           <div id="pre" style="white-space: pre-wrap">Zeile eins
 Zeile zwei</div>
           <div style="display: contents"><span id="dc">Ohne Box</span></div>
+          <p>Ribosomen sind die Proteinfabriken jeder Zelle. Sie lesen die genetische Information der Boten-RNA und
+          verknüpfen Aminosäuren zu langen Ketten, aus denen sich Proteine falten. Ohne Ribosomen könnte kein Lebewesen wachsen.</p>
           <p id="far" style="margin-top: 3000px">Ganz unten.</p></body>`,
       }),
     );

@@ -1,4 +1,31 @@
-import { ARTICLE, expect, test, uiPoint, uiText } from './fixtures';
+import { ARTICLE, expect, PAGE, test, uiPoint, uiText } from './fixtures';
+
+test('a page in another language gets an offer; Translate translates it', async ({ page }) => {
+  await page.goto(ARTICLE);
+  // detected in the browser: German, while the browser (and so the target) is English
+  await expect.poll(() => uiText(page, '.rb-pill.is-offer .rb-pt')).toBe('Deutsch → English');
+  expect(await uiText(page, '.rb-pill .rb-pa')).toBe('Translate');
+  const go = (await uiPoint(page, '.rb-pill .rb-pa'))!;
+  await page.mouse.click(go.x, go.y);
+  await expect(page.locator('#p')).toHaveText('en:Ein en:Ribosom en:ist alt.');
+  expect(await uiText(page, '.rb-pill.is-offer')).toBeNull();
+});
+
+test('× hides the offer on this site until the browser closes; a page in the target language gets none', async ({ page }) => {
+  await page.goto(ARTICLE);
+  await expect.poll(() => uiText(page, '.rb-pill.is-offer .rb-pt')).toBe('Deutsch → English');
+  const x = (await uiPoint(page, '.rb-pill .rb-x'))!;
+  await page.mouse.click(x.x, x.y);
+  await page.reload();
+  await page.locator('ribosome-ui').waitFor({ state: 'attached' });
+  await page.waitForTimeout(1500);
+  expect(await uiText(page, '.rb-pill.is-on')).toBeNull();
+
+  await page.goto(PAGE);
+  await page.locator('ribosome-ui').waitFor({ state: 'attached' });
+  await page.waitForTimeout(1500);
+  expect(await uiText(page, '.rb-pill.is-on')).toBeNull();
+});
 
 test('an "always translate" site is translated in place, lazily, and goes back to the original', async ({ context, page }) => {
   const sw = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));

@@ -96,6 +96,29 @@ function split(g: Group, nodes: Text[]): Sent[] {
   return out;
 }
 
+/**
+ * The page's own text for language detection, up to `max` characters. Paragraphs first: menus and language
+ * pickers ("Afrikaans, العربية, Беларуская…") would drown the article.
+ */
+export function sampleText(max = 4000): string {
+  const root = document.querySelector('main, article, [role=main]') ?? document.body;
+  if (!root) return '';
+  let p = '';
+  for (const el of root.querySelectorAll('p')) {
+    if (el.closest(SKIP)) continue;
+    p += `${el.textContent!.trim()} `;
+    if (p.length >= max) return p;
+  }
+  if (p.length >= 200) return p;
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
+    acceptNode: (n) =>
+      n.nodeType === Node.TEXT_NODE ? NodeFilter.FILTER_ACCEPT : skipped(n as Element) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_SKIP,
+  });
+  let s = '';
+  for (let n = w.nextNode(); n && s.length < max; n = w.nextNode()) if (letters(n.nodeValue!)) s += `${n.nodeValue!.trim()} `;
+  return s;
+}
+
 export class PageTranslation {
   view: PageView = { on: false, from: '', to: '', progress: null, error: null };
   /** Translations survive "Show original", so translating again costs no requests. */

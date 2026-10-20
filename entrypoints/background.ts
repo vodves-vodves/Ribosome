@@ -6,6 +6,7 @@ import {
   PORT,
   type BatchRequest,
   type DoneMessage,
+  type OfferMessage,
   type PageStateMessage,
   type QueuedMessage,
   type ShortcutMessage,
@@ -66,10 +67,21 @@ export default defineBackground(() => {
   browser.action.setBadgeBackgroundColor({ color: '#007aff' });
   browser.action.setBadgeTextColor({ color: '#fff' });
 
-  browser.runtime.onMessage.addListener((m: PageStateMessage | ShortcutMessage, sender, respond) => {
+  const OFF = 'offerOff';
+  const dismissed = async () => ((await browser.storage.session.get(OFF))[OFF] as string[] | undefined) ?? [];
+
+  browser.runtime.onMessage.addListener((m: PageStateMessage | ShortcutMessage | OfferMessage, sender, respond) => {
     if (m.type === 'shortcut') {
       browser.commands.getAll().then((all) => respond(all.find((c) => c.name === 'toggle-page')?.shortcut ?? ''));
       return true;
+    }
+    if (m.type === 'offer:ask') {
+      dismissed().then((hosts) => respond(hosts.includes(m.host)), () => respond(false));
+      return true;
+    }
+    if (m.type === 'offer:dismiss') {
+      dismissed().then((hosts) => browser.storage.session.set({ [OFF]: [...hosts, m.host] }));
+      return;
     }
     const tab = sender.tab;
     if (m.type !== 'page:state' || !tab?.id) return;

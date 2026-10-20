@@ -15,6 +15,8 @@ export type Settings = {
   theme: Theme;
   /** Hostnames whose pages are translated as soon as they open. */
   autoSites: string[];
+  /** Offer to translate a page that isn't in the target language. */
+  offerPages: boolean;
 };
 
 const secondFor = (target: string) => (target === 'en' ? 'es' : 'en');
@@ -25,7 +27,7 @@ const UI_ALIASES: Record<string, string> = { nb: 'no', nn: 'no', 'zh-HK': 'zh-TW
 function defaults(): Settings {
   const ui = browser.i18n.getUILanguage();
   const target = [UI_ALIASES[ui], ui, ui.split('-')[0]!].find((l) => l && LANGS.includes(l)) ?? 'en';
-  return { target, secondary: secondFor(target), source: 'auto', mode: 'icon', translateInFields: true, provider: 'google', theme: 'auto', autoSites: [] };
+  return { target, secondary: secondFor(target), source: 'auto', mode: 'icon', translateInFields: true, provider: 'google', theme: 'auto', autoSites: [], offerPages: true };
 }
 
 const KEY = 'settings';

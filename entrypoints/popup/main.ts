@@ -175,6 +175,7 @@ function apply() {
   $$<HTMLSelectElement>('select[data-set]').forEach((el) => (el.value = String(S[el.dataset.set as keyof Settings])));
   $$('#set-mode [data-mode]').forEach((el) => el.setAttribute('aria-checked', String(el.dataset.mode === S.mode)));
   $<HTMLInputElement>('#set-fields').checked = S.translateInFields;
+  $<HTMLInputElement>('#set-offer').checked = S.offerPages;
   $$('#set-theme button').forEach((el) => el.classList.toggle('is-on', el.dataset.theme === S.theme));
   renderSites();
 }
@@ -196,6 +197,7 @@ $('#set-mode').addEventListener('click', (e) => {
   if (r) save({ mode: r.dataset.mode as Settings['mode'] });
 });
 $<HTMLInputElement>('#set-fields').addEventListener('change', (e) => save({ translateInFields: (e.target as HTMLInputElement).checked }));
+$<HTMLInputElement>('#set-offer').addEventListener('change', (e) => save({ offerPages: (e.target as HTMLInputElement).checked }));
 $('#set-theme').addEventListener('click', (e) => {
   const b = (e.target as Element).closest<HTMLElement>('button[data-theme]');
   if (b) save({ theme: b.dataset.theme as Settings['theme'] });

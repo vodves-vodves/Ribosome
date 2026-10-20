@@ -77,7 +77,9 @@ Pin a window and it stays on screen while you read on. Drag it by its header and
 
 Right-click the page and pick **Ribosome › Translate page**, press <kbd>Alt</kbd>+<kbd>T</kbd>, or use the button in the popup. The text is replaced in place: the layout, links and buttons stay as they were, and code and form fields are left alone. What's on screen goes first, the rest follows as you scroll, and new posts in a feed are translated as they appear.
 
-A small bar shows the languages and an **Original** button. After a few seconds it folds into a circle, and you can drag it anywhere: it remembers the spot. Turn on **Always translate this site** in its menu or in the right-click menu, and the site is translated as soon as it opens. The right-click menu also translates a selection, whatever the trigger mode.
+Open a page in another language and the same bar offers **Translate** by itself. The language is detected inside the browser, so nothing is sent anywhere until you click. Close the offer, and it stays away from that site until the browser closes; the settings can turn it off for good.
+
+The bar shows the languages and an **Original** button. After a few seconds it folds into a circle, and you can drag it anywhere: it remembers the spot. Turn on **Always translate this site** in its menu or in the right-click menu, and the site is translated as soon as it opens. The right-click menu also translates a selection, whatever the trigger mode.
 
 <p align="center">
   <picture>
