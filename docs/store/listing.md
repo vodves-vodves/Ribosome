@@ -6,7 +6,7 @@ Package: `ribosome-<version>-chrome.zip` from the [latest release](https://githu
 
 ## Store listing
 
-The summary under the name comes from the manifest (`extDescription` in `shared/locales`).
+The name and the summary under it come from the manifest (`extName` and `extDescription` in `shared/locales`).
 
 - **Category:** Productivity › Tools
 - **Languages:** English (default), Russian

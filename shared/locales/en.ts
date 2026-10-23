@@ -1,4 +1,5 @@
 export default {
+  extName: 'Ribosome — Page & Text Translator',
   extDescription: 'Translate selected text or the whole page without leaving it',
   cmdTogglePage: 'Translate the page or show the original',
   translate: 'Translate',

@@ -44,8 +44,10 @@ export default defineBackground(() => {
   browser.runtime.onInstalled.addListener(async () => {
     await browser.contextMenus.removeAll();
     const documentUrlPatterns = ['http://*/*', 'https://*/*'];
-    browser.contextMenus.create({ id: 'page', title: t('translatePage'), contexts: ['page'], documentUrlPatterns });
-    browser.contextMenus.create({ id: 'site', type: 'checkbox', title: t('alwaysSite'), contexts: ['page'], documentUrlPatterns });
+    // an own parent, or Chrome would group the page items under the long store name
+    browser.contextMenus.create({ id: 'root', title: 'Ribosome', contexts: ['page'], documentUrlPatterns });
+    browser.contextMenus.create({ id: 'page', parentId: 'root', title: t('translatePage'), contexts: ['page'], documentUrlPatterns });
+    browser.contextMenus.create({ id: 'site', parentId: 'root', type: 'checkbox', title: t('alwaysSite'), contexts: ['page'], documentUrlPatterns });
     browser.contextMenus.create({ id: 'sel', title: t('menuTranslateSel'), contexts: ['selection'], documentUrlPatterns });
   });
 

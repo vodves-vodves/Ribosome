@@ -3,7 +3,8 @@ import { LOCALES } from './shared/locales';
 
 export default defineConfig({
   manifest: {
-    name: 'Ribosome',
+    // the store takes its title from here, so the localized name carries the search word
+    name: '__MSG_extName__',
     description: '__MSG_extDescription__',
     default_locale: 'en',
     // appearance: base-select for the popup dropdowns
@@ -15,12 +16,12 @@ export default defineConfig({
     },
   },
   hooks: {
-    // the manifest description and the shortcut name are the only strings Chrome localizes by itself
+    // the manifest name, description and the shortcut name are the only strings Chrome localizes by itself
     'build:publicAssets'(_, files) {
       for (const [lang, m] of Object.entries(LOCALES))
         files.push({
           relativeDest: `_locales/${lang}/messages.json`,
-          contents: JSON.stringify({ extDescription: { message: m.extDescription }, cmdTogglePage: { message: m.cmdTogglePage } }),
+          contents: JSON.stringify({ extName: { message: m.extName }, extDescription: { message: m.extDescription }, cmdTogglePage: { message: m.cmdTogglePage } }),
         });
     },
   },
