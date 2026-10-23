@@ -2,7 +2,7 @@
   "name": "ribosome",
   "description": "Translate selected text or the whole page without leaving it",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.3.1",
   "license": "MIT",
   "repository": "github:vodves-vodves/Ribosome",
   "type": "module",

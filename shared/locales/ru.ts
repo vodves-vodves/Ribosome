@@ -1,6 +1,7 @@
 import type en from './en';
 
 export default {
+  extName: 'Ribosome — переводчик страниц и текста',
   extDescription: 'Перевод выделенного текста или всей страницы прямо на месте',
   cmdTogglePage: 'Перевести страницу или показать оригинал',
   translate: 'Перевести',
